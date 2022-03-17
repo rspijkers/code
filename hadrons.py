@@ -29,3 +29,6 @@ Xizero = hadron('Xi0', 3322, '#Xi^{0}')
 Xizerobar = hadron('Xi0bar', -3322, '#bar{#Xi^{0}}')
 Ximinus = hadron('Xi-', 3312, '#Xi^{-}')
 Xiplus = hadron('Xi+', -3312, '#Xi^{+}')
+
+Omegaminus = hadron('Omega-', 3334, '#Omega^{-}')
+Omegaplus = hadron('Omega+', -3334, '#Omega^{+}')

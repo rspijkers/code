@@ -4,22 +4,9 @@
 # incompatibilities may lead to segmentation violation
 from hadrons import * # import hadron classes to easily access well defined properties such as pdg codes.
 import numpy as np
-from ROOT import TFile, TDirectory
-import os#, sys
-
-# function that loads THn from given inputfile
-def load_THn(filename, THn_name):
-    # TODO: add function description
-    """
-    """
-    inputfile = TFile(filename, "READ") # READ should be default
-    if inputfile.IsZombie():
-        print(f"Error: Failed to open file {inputfile}")
-        raise Exception('IsZombie')
-    THn = inputfile.Get(THn_name)
-    inputfile.Close()
-    return THn
-    # maybe implement that the function searches for THn in file, no need to specify THn name
+from joblib import Parallel, delayed
+from ROOT import TFile, TH1
+# import os#, sys
 
 # function that iterates over axes in THn, prints names and indices,
 def produce_axes_dict(THn):
@@ -101,118 +88,150 @@ def project(THn, *axes, **kwargs):
 
     # TODO: add Legend
 
+    # cleanup to prevent RAM crash
+    THn.Delete()
+
     return projection
 
-# main function, called at the end of the script
-def main():
-    inputfilepath = "output/ssbarv2_100M_14TeV_Monash.root"
-    hTHn = load_THn(inputfilepath, "hSS")
-    hNtrigger = TFile(inputfilepath, "READ").Get("hPDG")
+# make all relevant deltaPhi projections
+def make_projections(inputfilepath, parallel = False):
+
+    inputfile = TFile(inputfilepath, "READ") # READ should be default
+    if inputfile.IsZombie():
+        print(f"Error: Failed to open file {inputfile}")
+        raise Exception('IsZombie')
+    hTHn = inputfile.Get("hSS")
+        
+    # get the trigger PDG and pT vs eta histo's to propagate to projections outputfile
+    hPDG = inputfile.Get("hPDG").Clone()
+    hEtaPt = inputfile.Get("hEtaPt").Clone()
 
     axes = produce_axes_dict(hTHn)
 
-    # NOTE: histo's created after this point are automatically added to outputfile
-    outputfile = TFile("output/PyRootOutput.root", "RECREATE")
-
     # TODO: set global plot settings? smt like set_plotstyle()
+    TH1.AddDirectory(False);
 
-    # create all histograms here
+    outputfile = TFile("output/Projections.root", "RECREATE")
+    # propagate plots to projections output, and close inputfile
+    hPDG.SetDirectory(outputfile)
+    hEtaPt.SetDirectory(outputfile)
+    hPDG.Write()
+    hEtaPt.Write()
+    inputfile.Close()
 
-    # create directories in root output file
-    Xi0dir = outputfile.mkdir('Xi0', 'strangeness correlations with Xi0 trigger');
-    Xi0ssdir = outputfile.mkdir('Xi0ss', 'same-sign strangeness correlations with Xi0 trigger');
-    Ximinusdir = outputfile.mkdir('Xi-', 'strangeness correlations with Ximinus trigger');
-    Ximinusssdir = outputfile.mkdir('Xi-ss', 'same-sign strangeness correlations with Ximinus trigger');
-    Lambdadir = outputfile.mkdir('Lambda', 'strangeness correlations with Lambda trigger');
-    Lambdassdir = outputfile.mkdir('Lambdass', 'same-sign strangeness correlations with Lambda trigger');
-    K0dir = outputfile.mkdir('K0', 'strangeness correlations with K0 trigger');
-    K0ssdir = outputfile.mkdir('K0ss', 'same-sign strangeness correlations with K0 trigger');
-    Kminusdir = outputfile.mkdir('K-', 'strangeness correlations with Kminus trigger');
-    Kminusssdir = outputfile.mkdir('K-ss', 'same-sign strangeness correlations with Kminus trigger');
-
-    # make the 2D pT,eta histogram for trigger
-    histo = project(hTHn, axes['pTTrigger'], axes['etaTrigger'], trigger = Xizero, name = "h2_Xi0_Trigger_pT_eta")
-    histo.Add(project(hTHn, axes['pTTrigger'], axes['etaTrigger'], trigger = Xizerobar))
-    histo.Write()
-    histo = project(hTHn, axes['pTTrigger'], axes['etaTrigger'], trigger = Ximinus, name = "h2_Xi-_Trigger_pT_eta")
-    histo.Add(project(hTHn, axes['pTTrigger'], axes['etaTrigger'], trigger = Xiplus))
-    histo.Write()
+    # # make the 2D pT,eta histogram for trigger
+    # histo = project(hTHn, axes['pTTrigger'], axes['etaTrigger'], trigger = Xizero, name = "h2_Xi0_Trigger_pT_eta")
+    # histo.Add(project(hTHn, axes['pTTrigger'], axes['etaTrigger'], trigger = Xizerobar))
+    # histo.Write()
+    # histo = project(hTHn, axes['pTTrigger'], axes['etaTrigger'], trigger = Ximinus, name = "h2_Xi-_Trigger_pT_eta")
+    # histo.Add(project(hTHn, axes['pTTrigger'], axes['etaTrigger'], trigger = Xiplus))
+    # histo.Write()
 
     # make the deltaPhi correlation histo's
-    assoclist = [Kplus, Kzero, Lambdabar, Xizerobar, Xiplus]
-    antiassoclist = [Kminus, Kzerobar, Lambda, Xizero, Ximinus]
-    for i in range(5):
-        # Xi0
-        Xi0dir.cd()
-        histo = project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Xizero, associated = assoclist[i])
-        histo.Add(project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Xizerobar, associated = antiassoclist[i]))
-        histo.Write()
-        # Xi0 samesign
-        Xi0ssdir.cd()
-        histo = project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Xizero, associated = antiassoclist[i])
-        histo.Add(project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Xizerobar, associated = assoclist[i]))
-        histo.Write()
-        # Ximinus
-        Ximinusdir.cd()
-        histo = project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Ximinus, associated = assoclist[i])
-        histo.Add(project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Xiplus, associated = antiassoclist[i]))
-        histo.Write()
-        # Ximinus
-        Ximinusssdir.cd()
-        histo = project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Ximinus, associated = antiassoclist[i])
-        histo.Add(project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Xiplus, associated = assoclist[i]))
-        histo.Write()
+    if parallel:
+        def write_corr(trig, i, assoc, j):
+            histo = project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = trig, associated = assoc, name = assoc.name)
+            histo.Add(project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = antistrangelist[i], associated = strangelist[j]))
+            return histo.Write()
+            # antihisto.Delete()
+        def write_ss_corr(trig, i, assoc, j):
+            histo = project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = trig, associated = assoc, name = assoc.name)
+            histo.Add(project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = antistrangelist[i], associated = antistrangelist[j]))
+            return histo.Write()
+            # antihisto.Delete()
 
-        # Lambda
-        Lambdadir.cd()
-        histo = project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Lambda, associated = assoclist[i])
-        histo.Add(project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Lambdabar, associated = antiassoclist[i]))
-        histo.Write()
-        # Lambda samesign
-        Lambdassdir.cd()
-        histo = project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Lambda, associated = antiassoclist[i])
-        histo.Add(project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Lambdabar, associated = assoclist[i]))
-        histo.Write()
+        for i,trig in enumerate(strangelist):
+            # opposite sign correlations
+            x = outputfile.mkdir(trig.name, f"strangeness correlations with {trig.name} trigger")
+            x.cd()
+            Parallel(n_jobs = len(strangelist), require='sharedmem')(delayed(write_corr)(trig, i, assoc, j) for j,assoc in enumerate(antistrangelist))
+            
+            # same sign correlations
+            x = outputfile.mkdir(f"{trig.name}ss", f"samesign strangeness correlations with {trig.name} trigger")
+            x.cd()
+            Parallel(n_jobs = len(strangelist), require='sharedmem')(delayed(write_ss_corr)(trig, i, assoc, j) for j,assoc in enumerate(strangelist))
+    elif not parallel:
+        for i,trig in enumerate(strangelist):
+            # opposite sign correlations
+            x = outputfile.mkdir(trig.name, f"strangeness correlations with {trig.name} trigger")
+            x.cd()
+            for j,assoc in enumerate(antistrangelist): 
+                histo = project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = trig, associated = assoc, name = assoc.name)
+                histo.Add(project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = antistrangelist[i], associated = strangelist[j]))
+                histo.Write()
+                
+            # same sign correlations
+            x = outputfile.mkdir(f"{trig.name}ss", f"samesign strangeness correlations with {trig.name} trigger")
+            x.cd()
+            for j,assoc in enumerate(strangelist): 
+                histo = project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = trig, associated = assoc, name = assoc.name)
+                histo.Add(project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = antistrangelist[i], associated = antistrangelist[j]))
+                histo.Write()
 
-        # TODO: Sigma
-
-        # K0
-        K0dir.cd()
-        histo = project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Kzero, associated = assoclist[i])
-        histo.Add(project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Kzerobar, associated = antiassoclist[i]))
-        histo.Write()
-        # K0 samesign
-        K0ssdir.cd()
-        histo = project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Kzero, associated = antiassoclist[i])
-        histo.Add(project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Kzerobar, associated = assoclist[i]))
-        histo.Write()
-        # Kminus
-        Kminusdir.cd()
-        histo = project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Kminus, associated = assoclist[i])
-        histo.Add(project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Kplus, associated = antiassoclist[i]))
-        histo.Write()
-        # Kminus
-        Kminusssdir.cd()
-        histo = project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Kminus, associated = antiassoclist[i])
-        histo.Add(project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Kplus, associated = assoclist[i]))
-        histo.Write()
-
-    # try if we can access a histo we just wrote to file:
-    # test = outputfile.Get("Xi0/h2Xi0bar_deltaPhi_pTAssoc").ProjectionX()
-    # for i in range(4):
-    #     print(f"mean of axis {i} is {test.GetMean(i)}")
-
-    outputfile.cd()    # return to parent
-
-    # quick test with lambda-lambda(bar) correlation
-    hll = project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Lambda, associated = Lambda)
-    hll.Add(project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Lambdabar, associated = Lambdabar))
-    hll.Write()
-    hllbar = project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Lambda, associated = Lambdabar)
-    hllbar.Add(project(hTHn, axes['deltaPhi'], axes['pTAssoc'], trigger = Lambdabar, associated = Lambda))
-    hllbar.Write()
-
+    # outputfile.cd()    # return to parent
     # outputfile.Write()
     outputfile.Close()
+    return "Finished make_projections()"
 
-main()
+def analysis(inputpath):
+    inputfile = TFile(inputpath, "READ")
+    TH1.AddDirectory(False);
+
+    # primitively substract samesign correlations from opposite sign
+    hPDG = inputfile.Get("hPDG")
+    # assert that x-axis range of the pdg histo is symmetrical around 0 (same amount of bins on each side)
+    nbins = hPDG.GetNbinsX()
+    assert(-1 * int(hPDG.GetBinLowEdge(1)) == int(hPDG.GetBinLowEdge(nbins) + 1)), f"Error: PDG histogram range is not symmetrical around 0! Please do something about it (xmin = {int(hPDG.GetBinLowEdge(1))}, xmax = {int(hPDG.GetBinLowEdge(nbins) + 1)})"
+
+    # get number of Xi0/Xi0bar
+    Xi0bin = hPDG.FindBin(Xizero.pdg); Xi0barbin = hPDG.FindBin(Xizerobar.pdg)
+    N_Xi0 = hPDG.GetBinContent(Xi0bin) + hPDG.GetBinContent(Xi0barbin)
+
+    outputfile = TFile("output/AnalysisResults.root", "RECREATE")
+    # do first only Xi0 trigger, later generalize
+    strangeness_sum = 0.
+    for i,assoc in enumerate(antistrangelist):
+        histo = inputfile.Get(f"Xi0/{assoc.name}").Clone()
+        histo.Add(inputfile.Get(f"Xi0ss/{strangelist[i].name}"), -1) # TODO: check that the weights/errors are properly propagated
+        histo.SetName(f"Xi0{assoc.name}_bkgsub")
+        histo.SetDirectory(outputfile)
+        histo.Write()
+        if assoc == Xizerobar or assoc == Xiplus: # double strange hadrons obviously count double
+            strangeness_sum += 2*histo.GetEntries()
+        elif assoc == Omegaplus:
+            strangeness_sum += 3*histo.GetEntries()
+        else:
+            strangeness_sum += histo.GetEntries()
+    
+    print(strangeness_sum/N_Xi0)
+
+    Ximinusbin = hPDG.FindBin(Ximinus.pdg); Xiplusbin = hPDG.FindBin(Xiplus.pdg)
+    N_Xipm = hPDG.GetBinContent(Ximinusbin) + hPDG.GetBinContent(Xiplusbin)
+
+    # do first only Xi- trigger, later generalize
+    strangeness_sum = 0.
+    for i,assoc in enumerate(antistrangelist):
+        histo = inputfile.Get(f"Xi-/{assoc.name}").Clone()
+        histo.Add(inputfile.Get(f"Xi-ss/{strangelist[i].name}"), -1) # TODO: check that the weights/errors are properly propagated
+        histo.SetName(f"Xi-{assoc.name}_bkgsub")
+        histo.SetDirectory(outputfile)
+        histo.Write()
+        if assoc == Xizerobar or assoc == Xiplus: # double strange hadrons obviously count double
+            strangeness_sum += 2*histo.GetEntries()
+        elif assoc == Omegaplus:
+            strangeness_sum += 3*histo.GetEntries()
+        else:
+            strangeness_sum += histo.GetEntries()
+    
+    print(strangeness_sum/N_Xipm)
+
+    inputfile.Close()
+    outputfile.Close()
+    return "Finished analysis()"
+
+antistrangelist = [Kplus, Kzero, Lambdabar, Xizerobar, Xiplus, Sigmaminusbar, Sigmaplusbar, Sigmazerobar, Omegaplus]
+strangelist = [Kminus, Kzerobar, Lambda, Xizero, Ximinus, Sigmaminus, Sigmaplus, Sigmazero, Omegaminus]
+
+# make_projections("output/ssbarv3_500M_14TeV_Monash.root", parallel = True)
+
+analysis("output/Projections.root")

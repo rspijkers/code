@@ -17,14 +17,27 @@ using namespace Pythia8;
 bool IsStrange(Int_t particlepdg){
 	// checks if given pdg code is that of a (anti)strange hadron, returns True/False
 	Int_t pdg = std::abs(particlepdg);
-	while(pdg >= 10) {
-		pdg /= 10;
+	if (pdg == 130) { // K0_l exception
+		return true;
+	} else {
+		while(pdg >= 10) {
+			pdg /= 10;
+		}
+		return (pdg == 3);
 	}
-	return (pdg == 3);
 }
 
 int main(int argc, char** argv)
 {
+	if (argc != 2) { // main() counts as one argument, together with outputfile path makes 2
+	cerr << " Unexpected number of command-line arguments. \n"
+         << " You are expected to provide a file path for the output and nothing else. \n"
+         << " Program stopped! " << endl;
+    return 1;
+
+	// TODO: check if argument is a valid path?
+
+	}
 	//PYTHIA SETTINGS
 	TString name;
 
@@ -35,30 +48,32 @@ int main(int argc, char** argv)
 
 	// Generator. Process selection. LHC initialization. Histogram.
 	Pythia pythia;
-	pythia.readString("Beams:idA = 2212"); //beam 1 proton
-	pythia.readString("Beams:idB = 2212"); //beam 2 proton
-	pythia.readString("Beams:eCM = 14000.");
-	pythia.readString("Tune:pp = 14");  // tune 14 = MONASH
+	pythia.readFile("ssbar_correlations.cmnd");
+	// TODO: put options in separate option file
+	// pythia.readString("Beams:idA = 2212"); //beam 1 proton
+	// pythia.readString("Beams:idB = 2212"); //beam 2 proton
+	// pythia.readString("Beams:eCM = 14000.");
+	// pythia.readString("Tune:pp = 14");  // tune 14 = MONASH
 
 	// FIXME: using time + process id as seed, needed when running multiple instances of script
 	Int_t processid = getpid();
 	string seedstr = "Random:seed = " + std::to_string((time(0) + processid)%900000000);
 	pythia.readString("Random:setSeed = on");
 	pythia.readString(seedstr); // 0 means it uses the time to generate a seed
-	pythia.readString("HardQCD:all = on");
+	// pythia.readString("HardQCD:all = on");
 
 	// strange hadron decays off
-	pythia.readString("130:mayDecay  = off"); //K0L
-	pythia.readString("321:mayDecay  = off"); //K+
-	pythia.readString("311:mayDecay  = off"); //K0
-	pythia.readString("310:mayDecay  = off"); //K0s
-	pythia.readString("3122:mayDecay = off"); //labda0
-	pythia.readString("3112:mayDecay = off"); //sigma-
-	pythia.readString("3212:mayDecay = off"); //sigma0
-	pythia.readString("3222:mayDecay = off"); //sigma+
-	pythia.readString("3312:mayDecay = off"); //xi-
-	pythia.readString("3322:mayDecay = off"); //xi+
-	pythia.readString("3334:mayDecay = off"); //omega-
+	// Note that K0 (K0bar) are allowed to decay!
+	// pythia.readString("130:mayDecay  = off"); //K0L
+	// pythia.readString("321:mayDecay  = off"); //K+
+	// pythia.readString("310:mayDecay  = off"); //K0s
+	// pythia.readString("3122:mayDecay = off"); //labda0
+	// pythia.readString("3112:mayDecay = off"); //sigma-
+	// pythia.readString("3212:mayDecay = off"); //sigma0
+	// pythia.readString("3222:mayDecay = off"); //sigma+
+	// pythia.readString("3312:mayDecay = off"); //xi-
+	// pythia.readString("3322:mayDecay = off"); //xi+
+	// pythia.readString("3334:mayDecay = off"); //omega-
 
 	//ME corrections
 	//use of matrix corrections where available
@@ -69,12 +84,12 @@ int main(int argc, char** argv)
 
 	// TODO: get outputfile (and path) from options of main, so we can steer it from a bash script
   	// Output file
-	string fileString = "output/PythiaResultMonash" + std::to_string(processid) + ".root"; // create unique filename based on process id
-	char fileName[64]; strcpy(fileName, fileString.c_str()); // convert string to char, so we can pass it to TFile
-	// char fileName[] = "PythiaResult.root";
-	TFile* outFile = new TFile(fileName, "CREATE"); // doesn't open file if it already exists TODO: change RECREATE flag
+	// string fileString = "output/PythiaResultMonash" + std::to_string(processid) + ".root"; // create unique filename based on process id
+	// char fileName[64]; strcpy(fileName, fileString.c_str()); // convert string to char, so we can pass it to TFile
+
+	TFile* outFile = new TFile(argv[1], "CREATE"); // doesn't open file if it already exists 
 	if(!outFile->IsOpen()) { // if output file isn't opened, abort program
-		cerr << "Error: File " + fileString + "is not opened, perhaps because it already exists. Aborting script.";
+		cerr << "Error: File " << argv[1] << "is not opened, perhaps because it already exists. Aborting script.";
 		return 1;
 	}
 
