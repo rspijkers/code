@@ -12,6 +12,9 @@ class hadron:
 # for now only strange hadrons are written out
 Kzero = hadron('K0', 311, "K^{0}")
 Kzerobar = hadron('K0bar', -311, "#bar{K^{0}}")
+Kzeroshort = hadron('K0_s', 310, 'K^{0}_{S}')
+Kzerolong = hadron('K0_l', 130, 'K^{0}_{L}')
+
 Kplus = hadron('K+', 321, 'K^{+}')
 Kminus = hadron('K-', -321, 'K^{-}')
 

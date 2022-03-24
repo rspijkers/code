@@ -7,7 +7,9 @@ Beams:idA = 2212        // beam 1 proton
 Beams:idB = 2212        // beam 2 proton
 Beams:eCM = 14000.      // sqrt(s) = 14 TeV
 Tune:pp = 14            // tune 14 = MONASH
-HardQCD:all = on
+SoftQCD:inelastic = on
+
+// maybe add colour reconnection? YES for comparison
 
 // strange hadron decays off
 // Note that K0 (K0bar) are allowed to decay!
@@ -22,6 +24,9 @@ HardQCD:all = on
 3322:mayDecay = off     // xi+
 3334:mayDecay = off     // omega-
 
+Init:showMultipartonInteractions = off
 Next:numberCount = 0    // 0 means no progress is printed, default is 1000 (print once every 1000 events)
+Next:numberShowEvent = 0
 
 // TODO: prevent pythia from printing all info to stdout, maybe only errors and such?
+// TODO: add Nevents as setting here? 
