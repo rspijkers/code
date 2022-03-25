@@ -9,8 +9,8 @@
 #include <cmath> // needed for modulo in deltaPhi calc
 #include <vector> // needed for a variable array
 #include <cstring> // string/char handling
+#include <chrono> // for measuring performance of script
 
-#define nEvents 5000	// 20000 // TODO: get this from cmnd settings file?
 #define PI 3.14159265
 
 using namespace Pythia8;
@@ -37,6 +37,9 @@ int main(int argc, char** argv)
     return 1;
 	}
 
+	// start keeping track of time
+    auto start = std::chrono::high_resolution_clock::now();
+
 	// TODO: check if argument is a valid path?
 
 	int mecorr=1;
@@ -47,7 +50,8 @@ int main(int argc, char** argv)
 	Pythia pythia;
 
 	// PYTHIA SETTINGS
-	pythia.readFile("ssbar_correlations.cmnd");
+	pythia.readFile("ssbar_skands_mode2.cmnd");
+	Int_t nEvents = pythia.mode("Main:numberOfEvents");
 
 	Int_t processid = getpid();
 	string seedstr = "Random:seed = " + std::to_string((time(0) + processid)%900000000);
@@ -82,9 +86,9 @@ int main(int argc, char** argv)
 	std::vector<Double_t> deltaPhi;
 	std::vector<Double_t> deltaEta;
 	TTree *tree = new TTree("tree", "tree with trigger/assoc strange hadrons");
-	tree->Branch("pdgTrigger", &partpdg, "partpdg/I");
-	tree->Branch("pTTrigger", &partpT, "partpT/D");
-	tree->Branch("etaTrigger", &parteta, "parteta/D");
+	tree->Branch("pdgTrigger", &partpdg, "pdgTrigger/I");
+	tree->Branch("pTTrigger", &partpT, "pTTrigger/D");
+	tree->Branch("etaTrigger", &parteta, "etaTrigger/D");
 	tree->Branch("pdgAssoc", &pdgAssoc);
 	tree->Branch("pTAssoc", &pTAssoc);
 	tree->Branch("etaAssoc", &etaAssoc);
@@ -137,4 +141,10 @@ int main(int argc, char** argv)
 	outFile->Write();
 	cout << "Tree written to file " << outFile->GetName() << endl;
 	outFile->Close();
+
+	// stop keeping track of time, and calculate how long it took
+    auto end = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::minutes>(end - start);
+    cout << "This script took " << duration.count() << " minutes to run." << endl;
+
 } // end main
