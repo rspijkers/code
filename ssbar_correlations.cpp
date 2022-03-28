@@ -45,7 +45,7 @@ int main(int argc, char** argv)
 	int mecorr=1;
 	const Double_t pTminTrigg = 4.;
 	const Double_t pTminAssoc = 0.;
-	const Double_t maxEta = 4.;
+	// Note that there is no eta cut, we will implement this after the run
 
 	Pythia pythia;
 
@@ -72,7 +72,7 @@ int main(int argc, char** argv)
 	}
 
 	// Output histo's
-  	TH2D *hEtaPt = new TH2D("hEtaPt","p_{T} vs #eta for all particles;#eta;p_{T} (GeV/c)", 40, -maxEta, maxEta, 50, 0, 10);
+  	TH2D *hEtaPt = new TH2D("hEtaPt","p_{T} vs #eta for all particles;#eta;p_{T} (GeV/c)", 40, -4., 4., 50, 0, 10);
 	TH1D *hPDG = new TH1D("hPDG", "PDG code for trigger strange hadrons", 8000, -4000, 4000); // use Double_t to get around maximum bin content of Int_t
 
 	// TODO: create tree to save all the data of trigger/assoc pairs to
@@ -107,7 +107,7 @@ int main(int argc, char** argv)
 			partpT = part.pT();
 			parteta = part.eta();
 			hEtaPt->Fill(parteta,partpT);
-			if(partpT > pTminTrigg && part.isFinal() && std::abs(parteta) < maxEta) { // final state particle + kine cuts
+			if(partpT > pTminTrigg && part.isFinal()) { // final state particle + kine cuts
 				// we have identified a potential trigger that satisfies the kinematic requirements
 				partpdg = part.id();
 				if(IsStrange(partpdg)) {
@@ -122,7 +122,7 @@ int main(int argc, char** argv)
 						Double_t part2pT = part2.pT();
 						Double_t part2eta = part2.eta();
 						Int_t part2pdg = part2.id();
-						if(IsStrange(part2pdg) && part2.isFinal() && partpT > part2pT && part2pT > pTminAssoc && std::abs(part2eta) < maxEta){
+						if(IsStrange(part2pdg) && part2.isFinal() && partpT > part2pT && part2pT > pTminAssoc){
 							Double_t dPhi = std::fmod(part.phi() - part2.phi() + 2.5*PI, 2*PI) - 0.5*PI; 
 							Double_t dEta = parteta - part2eta;
 							pdgAssoc.push_back(part2pdg);
