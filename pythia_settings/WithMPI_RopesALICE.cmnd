@@ -1,0 +1,73 @@
+! WithMPI_Ropes.cmnd.
+! This file contains the colour reconnection with ropes scenario
+! to  be read in for a Pythia8 run.
+! Lines beginning with a "!" are comments.
+! Author: Renan Acconcia
+
+!Last update: 01/08/2018
+!Only Inelastic events: INEL
+
+! 1) Settings related to output in init(), next() and stat().
+Init:showChangedSettings = on                 ! list changed settings
+Init:showChangedParticleData = off            ! list changed particle data
+Next:numberCount = 0                          ! print message every n events
+Next:numberShowInfo = 0                       ! print event information n times
+Next:numberShowProcess = 1                    ! print process record n times
+Next:numberShowEvent = 1                      ! print event record n times
+
+! 2) Seed settings
+Random:setSeed = on                           ! Random seed on
+Random:seed = 0                               ! Seed based on the computers clock
+
+! 3) Tunes settings
+!Tune:preferLHAPDF = 2                         ! Using LHAPDF 6
+!Tune:pp = 14                                  ! Using Monash2013 Tune. Same as default
+
+! 4) Underlying event Settings
+
+! 5) Settings for the softQCD-process generation. NSD scenario.
+SoftQCD:nonDiffractive = on                   ! Non Diffractive on
+SoftQCD:singleDiffractive = on                ! Single Diffractive on
+SoftQCD:doubleDiffractive = on                ! Double Diffractive on
+SoftQCD:centralDiffractive = on               ! Central Diffractive on
+SoftQCD:elastic = off                         ! Elastic off
+
+// This is a ropes setting acquired from Peter Christiansen on the Lund thing
+//===========================================================================
+MultiPartonInteractions:pT0Ref = 2.15
+//===========================================================================
+BeamRemnants:remnantMode = 1
+BeamRemnants:saturation = 5
+//===========================================================================
+ColourReconnection:mode = 1
+ColourReconnection:allowDoubleJunRem = off
+ColourReconnection:m0 = 0.3
+ColourReconnection:allowJunctions = on
+ColourReconnection:junctionCorrection = 1.2
+ColourReconnection:timeDilationMode = 2
+ColourReconnection:timeDilationPar = 0.18
+//===========================================================================
+Ropewalk:RopeHadronization = on
+Ropewalk:doShoving = on
+Ropewalk:tInit = 1.5 // Propagation time
+Ropewalk:deltat = 0.05
+Ropewalk:tShove 0.1
+Ropewalk:gAmplitude = 0. // Set shoving strength to 0 explicitly
+Ropewalk:doFlavour = on
+Ropewalk:r0 = 0.5
+Ropewalk:m0 = 0.2
+Ropewalk:beta = 0.1
+//===========================================================================
+// Enabling setting of vertex information.
+PartonVertex:setVertex = on
+PartonVertex:protonRadius = 0.7
+PartonVertex:emissionWidth = 0.1
+//===========================================================================
+
+! 6) Decay Supression
+ParticleDecays:limitTau0 = on          ! Only particles with tau0 < tau0Max are decayed.
+ParticleDecays:tau0Max = 10.           ! Tau0Max = 3. mm/c
+
+! 7) Beam parameter settings. Values below agree with default ones.
+!Beams:idA = 2212                             ! first beam, p = 2212, pbar = -2212
+!Beams:idB = 2212                             ! second beam, p = 2212, pbar = -2212
