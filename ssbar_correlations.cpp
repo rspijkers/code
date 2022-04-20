@@ -4,12 +4,13 @@
 #include "TH1F.h"
 #include "TH2F.h"
 #include "TH1I.h"
-#include "THnSparse.h"
+#include "TTree.h"
+#include "THnSparse.h" // obsolete?
 #include <cmath> // needed for modulo in deltaPhi calc
 #include <vector> // needed for a variable array
 #include <cstring> // string/char handling
+#include <chrono> // for measuring performance of script
 
-#define nEvents 5000	// 20000 // TODO: get this from cmnd settings file?
 #define PI 3.14159265
 
 using namespace Pythia8;
@@ -36,17 +37,21 @@ int main(int argc, char** argv)
     return 1;
 	}
 
+	// start keeping track of time
+    auto start = std::chrono::high_resolution_clock::now();
+
 	// TODO: check if argument is a valid path?
 
 	int mecorr=1;
 	const Double_t pTminTrigg = 4.;
 	const Double_t pTminAssoc = 0.;
-	const Double_t maxEta = 4.;
+	// Note that there is no eta cut, we will implement this after the run
 
 	Pythia pythia;
 
 	// PYTHIA SETTINGS
-	pythia.readFile("ssbar_correlations.cmnd");
+	pythia.readFile("ssbar_skands_mode2.cmnd");
+	Int_t nEvents = pythia.mode("Main:numberOfEvents");
 
 	Int_t processid = getpid();
 	string seedstr = "Random:seed = " + std::to_string((time(0) + processid)%900000000);
@@ -67,22 +72,28 @@ int main(int argc, char** argv)
 	}
 
 	// Output histo's
-  	TH2D *hEtaPt = new TH2D("hEtaPt","p_{T} vs #eta for all particles;#eta;p_{T} (GeV/c)", 40, -maxEta, maxEta, 50, 0, 10);
+  	TH2D *hEtaPt = new TH2D("hEtaPt","p_{T} vs #eta for all particles;#eta;p_{T} (GeV/c)", 40, -4., 4., 50, 0, 10);
 	TH1D *hPDG = new TH1D("hPDG", "PDG code for trigger strange hadrons", 8000, -4000, 4000); // use Double_t to get around maximum bin content of Int_t
 
-	// pdg trigger, pdg assoc, pT trigger, pT assoc, eta trigger, eta assoc, delta eta, delta phi
-	// so 8 dimensions
-	const Int_t ndims = 8;
-	Int_t bins[ndims] = {8000, 8000, 20, 20, 20, 20, 20, 20}; // bins
-	Double_t xmin[ndims] = {-4000, -4000, pTminTrigg, pTminAssoc, -maxEta, -maxEta, -2*maxEta, -.5*PI}; // xmin
-	Double_t xmax[ndims] = {4000, 4000, 15., 10., maxEta, maxEta, 2*maxEta, 1.5*PI}; // xmax
-	THnSparse *hss = new THnSparseD("hSS", "THnSparse for (anti)strange correlations", ndims, bins, xmin, xmax);
-	const char axisnames[ndims][32] = {"pdgTrigger", "pdgAssoc", "pTTrigger", "pTAssoc", "etaTrigger", "etaAssoc", "deltaEta", "deltaPhi"};
-	const char axistitles[ndims][64] = {"PDG_{Trigger}", "PDG_{Associated}", "p_{T,Trigger} (GeV/#it{c})", "p_{T,Associated} (GeV/#it{c})", "#eta_{Trigger}", "#eta_{Associated}", "#Delta#eta", "#Delta#varphi"};
-	for(Int_t axis = 0; axis < ndims; axis++) {
-		hss->GetAxis(axis)->SetName(axisnames[axis]);
-		hss->GetAxis(axis)->SetTitle(axistitles[axis]);
-	}
+	// TODO: create tree to save all the data of trigger/assoc pairs to
+	// not sure how to handle multiple assocs per trigger
+	Int_t partpdg;
+	Double_t partpT;
+	Double_t parteta;
+	std::vector<Int_t> pdgAssoc;
+	std::vector<Double_t> pTAssoc;
+	std::vector<Double_t> etaAssoc;
+	std::vector<Double_t> deltaPhi;
+	std::vector<Double_t> deltaEta;
+	TTree *tree = new TTree("tree", "tree with trigger/assoc strange hadrons");
+	tree->Branch("pdgTrigger", &partpdg, "pdgTrigger/I");
+	tree->Branch("pTTrigger", &partpT, "pTTrigger/D");
+	tree->Branch("etaTrigger", &parteta, "etaTrigger/D");
+	tree->Branch("pdgAssoc", &pdgAssoc);
+	tree->Branch("pTAssoc", &pTAssoc);
+	tree->Branch("etaAssoc", &etaAssoc);
+	tree->Branch("deltaPhi", &deltaPhi);
+	tree->Branch("deltaEta", &deltaEta);
 
 	cout << "Generating " << nEvents << " events..." << endl;
 	// event loop
@@ -90,54 +101,50 @@ int main(int argc, char** argv)
 		if(!pythia.next()) continue;
 
 		int nPart = pythia.event.size();
-		std::vector<Int_t> triggers = {};
 		
 		for(int iPart = 0; iPart < nPart; iPart++) {
       		const Particle &part = pythia.event[iPart];
-			Double_t partpT = part.pT();
-			Double_t parteta = part.eta();
+			partpT = part.pT();
+			parteta = part.eta();
 			hEtaPt->Fill(parteta,partpT);
-			if(partpT > pTminTrigg && part.isFinal() && std::abs(parteta) < maxEta) { // final state particle + kine cuts
+			if(partpT > pTminTrigg && part.isFinal()) { // final state particle + kine cuts
 				// we have identified a potential trigger that satisfies the kinematic requirements
-				Int_t partpdg = part.id();
+				partpdg = part.id();
 				if(IsStrange(partpdg)) {
-					hPDG->Fill((Double_t) partpdg);
 					// If we get this far with the trigger particle, we will correlate it with other strange hadrons
 					// In order to be able to normalize, we need to keep track of how many triggers we have for each hadron, because in the next part we will fill the trigger particle info for each pair, which could be more than one.
-					triggers.push_back(iPart);
+					hPDG->Fill((Double_t) partpdg);
+
+					// Clear the vectors with the associated/correlation variables
+					pdgAssoc.clear(); pTAssoc.clear(); etaAssoc.clear(); deltaPhi.clear(); deltaEta.clear();
 					for(int jPart = 0; jPart < nPart; jPart++) {
 						const Particle &part2 = pythia.event[jPart];
 						Double_t part2pT = part2.pT();
 						Double_t part2eta = part2.eta();
 						Int_t part2pdg = part2.id();
-						if(IsStrange(part2pdg) && part2.isFinal() && part2pT > pTminAssoc && std::abs(part2eta) < maxEta){
-							// if it is a strange hadron within kin. requirements, make sure we haven't already counted it
-							for (Int_t id : triggers) {
-								if (id == jPart) {
-									goto preventDoubleCounting;
-								}
-							}
-							// no double counting, we are good to go
-							Double_t deltaPhi = std::fmod(part.phi() - part2.phi() + 2.5*PI, 2*PI) - 0.5*PI; 
-							Double_t deltaEta = parteta - part2eta;
-							// check for part2pT>partpT, which is unlikely. Fill the histo according to trigger := highest pT
-							if(part2pT > partpT) {
-								Double_t vars[ndims] = {(Double_t) part2pdg, (Double_t) partpdg, part2pT, partpT, part2eta, parteta, deltaEta, deltaPhi};
-								hss->Fill(vars);
-							} else {
-								Double_t vars[ndims] = {(Double_t) partpdg, (Double_t) part2pdg, partpT, part2pT, parteta, part2eta, deltaEta, deltaPhi};
-								hss->Fill(vars);
-							}
+						if(IsStrange(part2pdg) && part2.isFinal() && partpT > part2pT && part2pT > pTminAssoc){
+							Double_t dPhi = std::fmod(part.phi() - part2.phi() + 2.5*PI, 2*PI) - 0.5*PI; 
+							Double_t dEta = parteta - part2eta;
+							pdgAssoc.push_back(part2pdg);
+							pTAssoc.push_back(part2pT);
+							etaAssoc.push_back(part2eta);
+							deltaPhi.push_back(dPhi);
+							deltaEta.push_back(dEta);
 						}
-						preventDoubleCounting:;
 					} // end assoc loop
+					tree->Fill();
 				}
 			}
 		} // end trigger loop
 	} // end event loop
 
-	hss->Write();
 	outFile->Write();
-	cout << "Histos written to file " << outFile->GetName() << endl;
+	cout << "Tree written to file " << outFile->GetName() << endl;
 	outFile->Close();
+
+	// stop keeping track of time, and calculate how long it took
+    auto end = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::minutes>(end - start);
+    cout << "This script took " << duration.count() << " minutes to run." << endl;
+
 } // end main
