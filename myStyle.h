@@ -26,7 +26,7 @@ TStyle* createStyle(Bool_t setstyle = false){
     myStyle->SetHistLineColor(kRed);
     myStyle->SetFuncWidth(2);
     myStyle->SetFuncColor(kGreen);
-    myStyle->SetLineWidth(2);
+    myStyle->SetLineWidth(1);
     myStyle->SetLabelSize(0.045,"xyz");
     myStyle->SetLabelOffset(0.01,"y");
     myStyle->SetLabelOffset(0.01,"x");
@@ -38,7 +38,7 @@ TStyle* createStyle(Bool_t setstyle = false){
     myStyle->SetTextSizePixels(26);
     myStyle->SetTextFont(42);
     //  myStyle->SetTickLength(0.04,"X");  myStyle->SetTickLength(0.04,"Y"); 
-    myStyle->SetLegendBorderSize(0);
+    myStyle->SetLegendBorderSize(1);
     myStyle->SetLegendFillColor(kWhite);
     //  myStyle->SetFillColor(kWhite);
     myStyle->SetLegendFont(42);

@@ -52,19 +52,19 @@ void compare() {
         TString name = (TString) key->GetName();
         TString ctitle = TString("title of ") + name;
         TCanvas *c = new TCanvas(name, ctitle, 800, 800);
-        TLegend *legend = new TLegend(0.7, 0.8, 1.0, 0.9);
+        TLegend *legend = new TLegend(0.7, 0.8, 0.9, 0.9, "PYTHIA Tunes");
         TString plottitle = key->GetTitle();
         int i = 0;
         THStack *hStack = new THStack(name, plottitle);
         for(NamedFile *file : infiles){
             TH1D *h = (TH1D*) file->Get(name);
             h->SetLineColor(colors[i]);
-            h->SetOption("HIST E"); // plot histogram style with errors
+            h->SetOption("HIST"); // plot histogram style
             hStack->Add(h);
             legend->AddEntry(h, file->GetCustomName());
             i++;
         }
-        hStack->Draw("nostack");
+        hStack->Draw("nostack E1"); // don't stack histo's, draw errors
         legend->Draw();
         c->Write();
     }

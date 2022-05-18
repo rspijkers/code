@@ -13,8 +13,8 @@ double rapidityFromEta(double eta, double pt, double m){
     return log((sqrt(m2 + pt2*cosheta*cosheta) + pt*sinh(eta)) / sqrt(m2 + pt2));
 }
 
+// A class that adds a name to a TFile other than the filepath.
 class NamedFile : public TFile {
-    // A class that adds a name to a TFile other than the filepath.
     private:
         TString customName;
     
