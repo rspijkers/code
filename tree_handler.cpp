@@ -7,31 +7,31 @@
 #include <vector>
 #include <unordered_map>
 #include "hadrons.h"
-
+#include "helperfunctions.h"
 
 void tree_handler() {
     TH1::SetDefaultSumw2(); // make sure errors are propagated in histo's
     
-    TFile *inputfile = new TFile("output/ssbar_5M_14TeV_ropes_noEta.root", "READ");
+    TFile *inputfile = new TFile("output/ssbar_5M_14TeV_monash_noEta.root", "READ");
     TTree *tree = (TTree*) inputfile->Get("tree");
     // tree->Print();
     // tree->Show(0);
 
-    TFile *outputfile = new TFile("output/plots_ropes_test.root", "RECREATE");
+    TFile *outputfile = new TFile("output/plots_monash_test.root", "RECREATE");
 
     // Kinematic cuts
-    Double_t maxEtaTrigger = 2.0;
-    Double_t maxEtaAssoc = 3.0;
-    std::cout << "We are using eta cuts: maxEtaTrigger = " << maxEtaTrigger << " and maxEtaAssoc = " << maxEtaAssoc << std::endl;
+    const Double_t maxEtaTrigger = 2.0;
+    const Double_t maxEtaAssoc = 3.0;
+    // std::cout << "We are using eta cuts: maxEtaTrigger = " << maxEtaTrigger << " and maxEtaAssoc = " << maxEtaAssoc << std::endl;
 
     // Set branch address, so we can use the variables when we GetEntry()
     Int_t pdgTrigger;
-    std::vector<int>* pdgAssoc = 0;
+    std::vector<Int_t>* pdgAssoc = 0;
     Double_t pTTrigger, etaTrigger;
-    std::vector<double>* pTAssoc = 0;
-    std::vector<double>* etaAssoc = 0;
-    std::vector<double>* deltaPhi = 0;
-    std::vector<double>* deltaEta = 0;
+    std::vector<Double_t>* pTAssoc = 0;
+    std::vector<Double_t>* etaAssoc = 0;
+    std::vector<Double_t>* deltaPhi = 0;
+    std::vector<Double_t>* deltaEta = 0;
     tree->SetBranchAddress("pdgTrigger", &pdgTrigger);
     tree->SetBranchAddress("pdgAssoc", &pdgAssoc);
     tree->SetBranchAddress("pTTrigger", &pTTrigger);
@@ -46,8 +46,7 @@ void tree_handler() {
     
     struct mapStruct
     {
-        TString name;
-        TString antiname;
+        Hadron hadron;
         TH1D* hSig; 
         TH1D* hBkg; 
         Int_t strangeness;
@@ -57,10 +56,14 @@ void tree_handler() {
         Double_t chargedKaonSig = 0;
     };
 
-    TH1D *hInclusiveTrigger = new TH1D("hInclusiveTrigger", "Inclusive transverse momentum spectrum for trigger hadrons", 100, 4, 50);
-    TH1D *hInclusiveAssoc = new TH1D("hInclusiveAssoc", "Inclusive transverse momentum spectrum for associated hadrons", 100, 0, 20);
+    TH1D *hInclusiveTrigger = new TH1D("hInclusiveTrigger", "Inclusive transverse momentum spectrum for trigger hadrons", 100, 0, 25);
+    TH1D *hInclusiveAssoc = new TH1D("hInclusiveAssoc", "Inclusive transverse momentum spectrum for associated hadrons", 100, 0, 10);
     TH1D *hEtaTrigger = new TH1D("hEtaTrigger", "Pseudorapidity spectrum for trigger hadrons", 100, -10, 10);
     TH1D *hEtaAssoc = new TH1D("hEtaAssoc", "Pseudorapidity spectrum for associated hadrons", 100, -10, 10);
+    TH1D *hYTrigger = new TH1D("hYTrigger", "Rapidity spectrum for trigger hadrons", 100, -10, 10);
+    TH1D *hYAssoc = new TH1D("hYAssoc", "Rapidity spectrum for associated hadrons", 100, -10, 10);
+    TH1D *hEtaNormal = new TH1D("hEtaNormal", "Pseudorapidity spectrum for 'normal' baryons", 100, -10, 10);
+    TH1D *hEtaAnti = new TH1D("hEtaAnti", "Pseudorapidity spectrum for anti baryons", 100, -10, 10);
 
     TH1D *hTemp = new TH1D("template", "template", nbins, 0, nbins); 
     // hTemp->SetOption("HIST E");
@@ -97,8 +100,7 @@ void tree_handler() {
 
         // normal pdg
         mapStruct normal;
-        normal.name = name;
-        normal.antiname = antiname;
+        normal.hadron = hadron;
         normal.hSig = hssbar;
         normal.hBkg = hss;
         normal.strangeness = strange;
@@ -106,28 +108,35 @@ void tree_handler() {
 
         // anti pdg
         mapStruct anti;
-        anti.name = name;
-        anti.antiname = antiname;
+        anti.hadron = hadron;
         anti.hSig = hsbars;
         anti.hBkg = hsbarsbar;
         anti.strangeness = -1*strange;
         map[-1*pdg] = anti;
     }
-    hTemp->Delete();
+    // hTemp->Delete();
+    mapStruct k0shortstruct, k0longstruct;
+    k0shortstruct.hadron = Kzeroshort;
+    k0longstruct.hadron = Kzerolong;
+    map[Kzeroshort.getPDG()] = k0shortstruct;
+    map[Kzerolong.getPDG()] = k0longstruct;
 
-    Long64_t nentries = tree->GetEntries(); 
+    const Long64_t nentries = tree->GetEntries(); 
     Double_t pTDuplicateCheck = -1;
     for(Long64_t i = 0; i < nentries; i++) {
         tree->GetEntry(i);
         // inclusive spectra before kine cuts
+        Hadron trigger = map[pdgTrigger].hadron;
         hInclusiveTrigger->Fill(pTTrigger);
         hEtaTrigger->Fill(etaTrigger);
+        Double_t y = rapidityFromEta(etaTrigger, pTTrigger, trigger.getMass()/1000.); // convert mass to GeV
+        hYTrigger->Fill(y);
         // check that the pT of the first assoc isn't exactly a match for the previous one
         // if it is, then we most likely have associated from the same event, resulting in duplicates in the inclusive spectrum
         // so we skip them
+        Bool_t isDuplicate = true;
         if((*pTAssoc)[0] != pTDuplicateCheck){ 
-            for(Double_t pT : *pTAssoc) hInclusiveAssoc->Fill(pT);
-            for(Double_t eta : *etaAssoc) hEtaAssoc->Fill(eta);
+            isDuplicate = false;
             pTDuplicateCheck = (*pTAssoc)[0]; 
         }
 
@@ -135,6 +144,9 @@ void tree_handler() {
         // if(etaTrigger > maxEtaTrigger) continue;
         // exception for K0_S/L
         if(pdgTrigger == Kzerolong.getPDG() || pdgTrigger == Kzeroshort.getPDG()) continue; 
+        // || pdgTrigger == Kminus.getPDG()  || pdgTrigger == Kminus.getAntiPDG()
+        if(pdgTrigger > 1000) {hEtaNormal->Fill(etaTrigger);}
+        else if(pdgTrigger < -1000) {hEtaAnti->Fill(etaTrigger);}
 
         TH1D *hSig = map[pdgTrigger].hSig;
         TH1D *hBkg = map[pdgTrigger].hBkg;
@@ -142,9 +154,18 @@ void tree_handler() {
         map[pdgTrigger].ntriggers++;
         // loop over assoc
         for(Int_t j = 0; j < pdgAssoc->size(); j++){
-            // kine cuts
             Int_t pdg = (*pdgAssoc)[j];
             Double_t eta = (*etaAssoc)[j];
+            Double_t pt = (*pTAssoc)[j];
+            Hadron assoc = map[pdg].hadron;
+            if(!isDuplicate){
+                hInclusiveAssoc->Fill(pt);
+                hEtaAssoc->Fill(eta);
+                y = rapidityFromEta(eta, pt, assoc.getMass()/1000.);
+                hYAssoc->Fill(y);
+            }
+
+            // kine cuts
             // if(eta > maxEtaAssoc) continue;
             // exception for K0_S/L
             if(pdg == Kzerolong.getPDG() || pdg == Kzeroshort.getPDG()){
@@ -155,11 +176,11 @@ void tree_handler() {
             Int_t aStrangeness = map[pdg].strangeness;
             // check if pair is ss or os and fill relevant histo
             if((tStrangeness > 0) != (aStrangeness > 0)){ // opposite sign
-                hSig->Fill(map[pdg].antiname, abs(aStrangeness));
+                hSig->Fill(assoc.getAntiName(), abs(aStrangeness));
                 // if K +/-, keep track so we can postprocess K0_S/L bkg
                 if (abs(pdg) == Kminus.getAntiPDG()) map[pdgTrigger].chargedKaonSig++;
             } else if ((tStrangeness > 0) == (aStrangeness > 0)){ // same sign
-                hBkg->Fill(map[pdg].antiname, abs(aStrangeness));
+                hBkg->Fill(assoc.getAntiName(), abs(aStrangeness));
                 // if K +/-, keep track so we can postprocess K0_S/L bkg
                 if (abs(pdg) == Kminus.getAntiPDG()) map[pdgTrigger].chargedKaonBkg++;
             } else {
@@ -187,8 +208,8 @@ void tree_handler() {
         hAntiBkg->Fill("K0_S/L", Bkg1);
         hAntiBkg->SetBinError(1, sqrt(hAntiBkg->GetBinContent(1)));// manually update bin error
 
-        hNormalSig->Add(hNormalBkg, -1);
-        hAntiSig->Add(hAntiBkg, -1);
+        hNormalSig->Add(hNormalBkg, -1.);
+        hAntiSig->Add(hAntiBkg, -1.);
 
         if(hNormalSig->GetBinContent(0) > 0 || hAntiSig->GetBinContent(0) > 0) {
             std::cout << "Warning: non-zero underflow bin detected in trigger" << hadron.getName() << std::endl;
