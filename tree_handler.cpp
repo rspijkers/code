@@ -9,15 +9,17 @@
 #include "hadrons.h"
 #include "helperfunctions.h"
 
+#define PI 3.14159265
+
 void tree_handler() {
     TH1::SetDefaultSumw2(); // make sure errors are propagated in histo's
     
-    TFile *inputfile = new TFile("output/ssbar_5M_14TeV_monash_noEta.root", "READ");
+    TFile *inputfile = new TFile("output/ssbar_5M_14TeV_monash_ppbar_noEta.root", "READ");
     TTree *tree = (TTree*) inputfile->Get("tree");
     // tree->Print();
     // tree->Show(0);
 
-    TFile *outputfile = new TFile("output/plots_monash_test.root", "RECREATE");
+    TFile *outputfile = new TFile("output/plots_monash_ppbar_test.root", "RECREATE");
 
     // Kinematic cuts
     const Double_t maxEtaTrigger = 2.0;
@@ -64,6 +66,13 @@ void tree_handler() {
     TH1D *hYAssoc = new TH1D("hYAssoc", "Rapidity spectrum for associated hadrons", 100, -10, 10);
     TH1D *hEtaNormal = new TH1D("hEtaNormal", "Pseudorapidity spectrum for 'normal' baryons", 100, -10, 10);
     TH1D *hEtaAnti = new TH1D("hEtaAnti", "Pseudorapidity spectrum for anti baryons", 100, -10, 10);
+
+    // DeltaPhi for lambda's, to check the difference between pp and ppbar
+    TH1D *hLLdphi = new TH1D("hLLdphi", "deltaphi for L-L", 50, -0.5*PI, 1.5*PI);
+    TH1D *hLLbardphi = new TH1D("hLLbardphi", "deltaphi for L-Lbar", 50, -0.5*PI, 1.5*PI);
+    TH1D *hLbarLdphi = new TH1D("hLbarLdphi", "deltaphi for Lbar-L", 50, -0.5*PI, 1.5*PI);
+    TH1D *hLbarLbardphi = new TH1D("hLbarLbardphi", "deltaphi for Lbar-Lbar", 50, -0.5*PI, 1.5*PI);
+
 
     TH1D *hTemp = new TH1D("template", "template", nbins, 0, nbins); 
     // hTemp->SetOption("HIST E");
@@ -161,7 +170,7 @@ void tree_handler() {
             if(!isDuplicate){
                 hInclusiveAssoc->Fill(pt);
                 hEtaAssoc->Fill(eta);
-                y = rapidityFromEta(eta, pt, assoc.getMass()/1000.);
+                y = rapidityFromEta(eta, pt, assoc.getMass()/1000.); // convert mass to GeV
                 hYAssoc->Fill(y);
             }
 
@@ -185,6 +194,15 @@ void tree_handler() {
                 if (abs(pdg) == Kminus.getAntiPDG()) map[pdgTrigger].chargedKaonBkg++;
             } else {
                 std::cout << "wtf did you do???" << std::endl;
+            }
+
+            // make some deltaphi plots for lambda correlations
+            if(pdgTrigger == Lambda.getPDG()){
+                if(pdg == Lambda.getPDG()){hLLdphi->Fill((*deltaPhi)[j]);}
+                else if(pdg == Lambda.getAntiPDG()){hLLbardphi->Fill((*deltaPhi)[j]);}
+            } else if(pdgTrigger == Lambda.getAntiPDG()){
+                if(pdg == Lambda.getPDG()){hLbarLdphi->Fill((*deltaPhi)[j]);}
+                else if(pdg == Lambda.getAntiPDG()){hLbarLbardphi->Fill((*deltaPhi)[j]);}
             }
         }
     }
@@ -232,6 +250,8 @@ void tree_handler() {
         std::cout << hadron.getName() << ": " << ratio << " +/- " << errNormal << " found with ntriggers = " << map[pdg].ntriggers << std::endl;
         std::cout << hadron.getAntiName() << ": " << ratio1 << " +/- " << errAnti << " found with ntriggers = " << map[antipdg].ntriggers << std::endl;
     }
+
+    // TODO: draw some lambda deltaphi correlations in the same histo?
     
     inputfile->Close();
     outputfile->Write();
