@@ -69,21 +69,29 @@ Hadron Kzerolong = Hadron("K0_L", 130, "K^{0}_{L}", 497.611);
 // D_s, B_s
 // Xi_c+, Xi_c0, Xi_b+, Xi_b0
 // Omega_c, Omega_cc, Omega_bc, Omega_b, Omega_bb
+// All the sigmas...
 // unknown masses are taken from pythia
 Hadron Dsubs = Hadron("Ds-", "Ds+", -431, "D_{s}^{-}", "D_{s}^{+}", 1968.30);
 Hadron Bsubs = Hadron("Bs0", "Bs0bar", 531, "B_{s}^{0}", "#bar{B_{s}^{0}}", 5366.77);
 
+Hadron Sigmacplusplus = Hadron("Sigmac++", "Sigmac++bar", 4222, "#Sigma_{c}^{++}", "#bar{#Sigma_{c}^{++}}", 2453.97);
+Hadron Sigmacplus = Hadron("Sigmac+", "Sigmac+bar", 4212, "#Sigma_{c}^{+}", "#bar{#Sigma_{c}^{+}}", 2452.9);
+Hadron Sigmaczero = Hadron("Sigmac0", "Sigmac0bar", 4112, "#Sigma_{c}^{0}", "#bar{#Sigma_{c}^{0}}", 2453.75);
+Hadron Sigmabplus = Hadron("Sigmab+", "Sigmab+bar", 5222, "#Sigma_{b}^{+}", "#bar{#Sigma_{b}^{+}}", 5810.56);
+Hadron Sigmabzero = Hadron("Sigmab0", "Sigmab0bar", 5212, "#Sigma_{b}^{0}", "#bar{#Sigma_{b}^{0}}", 5800.00); // pythia mass
+Hadron Sigmabminus = Hadron("Sigmab-", "Sigmab-bar", 5112, "#Sigma_{b}^{-}", "#bar{#Sigma_{b}^{-}}", 5815.64);
+
 Hadron Xiczero = Hadron("Xic0", "Xic0bar", 4132, "#Xi_{c}^{0}", "#bar{#Xi_{c}^{0}}", 2470.90);
 Hadron Xicplus = Hadron("Xic+", "Xic-", 4232, "#Xi_{c}^{+}", "#Xi_{c}^{-}", 2467.94);
-Hadron Xibzero = Hadron("Xib0", "Xib0bar", 5212, "#Xi_{b}^{0}", "#bar{#Xi_{b}^{0}}", 5791.9);
-Hadron Xibmin = Hadron("Xib-", "Xib+", 5112, "#Xi_{b}^{-}", "#Xi_{b}^{+}", 5797.0);
+Hadron Xibzero = Hadron("Xib0", "Xib0bar", 5232, "#Xi_{b}^{0}", "#bar{#Xi_{b}^{0}}", 5791.9);
+Hadron Xibmin = Hadron("Xib-", "Xib+", 5132, "#Xi_{b}^{-}", "#Xi_{b}^{+}", 5797.0);
 
 Hadron Omegac = Hadron("Omegac0", "Omegac0bar", 4332, "#Omega_{c}^{0}", "#bar{#Omega_{c}^{0}}", 2695.2);
-Hadron Omegacc = Hadron("Omegacc+", "Omegacc-", 4332, "#Omega_{cc}^{+}", "#Omega_{cc}^{-}", 3786.63);
+Hadron Omegacc = Hadron("Omegacc+", "Omegacc-", 4432, "#Omega_{cc}^{+}", "#Omega_{cc}^{-}", 3786.63); // pythia mass
 
-Hadron Omegabc = Hadron("Omegabc0", "Omegabc0bar", 5342, "#Omega_{bc}^{0}", "#bar{#Omega_{bc}^{0}", 7190.99);
+Hadron Omegabc = Hadron("Omegabc0", "Omegabc0bar", 5342, "#Omega_{bc}^{0}", "#bar{#Omega_{bc}^{0}", 7190.99); // pythia mass
 
 Hadron Omegab = Hadron("Omegab-", "Omegab+", 5332, "#Omega_{b}^{-}", "#Omega_{b}^{+}", 6046.1);
-Hadron Omegabb = Hadron("Omegabb-", "Omegabb+", 5532, "#Omega_{bb}^{-}", "#Omega_{bb}^{+}", 10602.09);
+Hadron Omegabb = Hadron("Omegabb-", "Omegabb+", 5532, "#Omega_{bb}^{-}", "#Omega_{bb}^{+}", 10602.09); // pythia mass
 
 #endif

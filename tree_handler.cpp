@@ -15,7 +15,7 @@
 void tree_handler() {
     TH1::SetDefaultSumw2(); // make sure errors are propagated in histo's
     
-    TFile* inputfile = new TFile("output/ssbar_5M_14TeV_monash_noEta.root", "READ");
+    TFile* inputfile = new TFile("output/Monash_ppbar_tau0_001_10299332.root", "READ");
     TTree* tree = (TTree*) inputfile->Get("tree");
     // tree->Print();
     // tree->Show(0);
@@ -161,7 +161,14 @@ void tree_handler() {
         tree->GetEntry(i);
         // inclusive spectra before kine cuts
         uniqueTriggerPDGs.insert(pdgTrigger); // will only insert if unique
-        Hadron trigger = map[pdgTrigger].hadron;
+        Hadron trigger;
+        // try to access element of map. if doesn't exist, skip this entire iteration
+        try{
+            trigger = map.at(pdgTrigger).hadron;
+        } catch (std::out_of_range){
+            std::cout << "caught trigger! pdg = " << pdgTrigger << std::endl;
+            continue;
+        }
         hInclusiveTrigger->Fill(pTTrigger);
         hEtaTrigger->Fill(etaTrigger);
         Double_t y = rapidityFromEta(etaTrigger, pTTrigger, trigger.getMass()/1000.); // convert mass to GeV
@@ -183,16 +190,22 @@ void tree_handler() {
         if(pdgTrigger > 1000) {hEtaNormal->Fill(etaTrigger);}
         else if(pdgTrigger < -1000) {hEtaAnti->Fill(etaTrigger);}
 
-        TH1D* hSig = map[pdgTrigger].hSig;
-        TH1D* hBkg = map[pdgTrigger].hBkg;
-        Int_t tStrangeness = map[pdgTrigger].strangeness;
-        map[pdgTrigger].ntriggers++;
+        TH1D* hSig = map.at(pdgTrigger).hSig;
+        TH1D* hBkg = map.at(pdgTrigger).hBkg;
+        Int_t tStrangeness = map.at(pdgTrigger).strangeness;
+        map.at(pdgTrigger).ntriggers++;
         // loop over assoc
         for(Int_t j = 0; j < pdgAssoc->size(); j++){
             Int_t pdg = (*pdgAssoc)[j];
             Double_t eta = (*etaAssoc)[j];
             Double_t pt = (*pTAssoc)[j];
-            Hadron assoc = map[pdg].hadron;
+            Hadron assoc;
+            try{
+                assoc = map.at(pdg).hadron;
+            } catch (std::out_of_range){
+                std::cout << "caught assoc! pdg = " << pdg << std::endl;
+                continue;
+            }
             if(!isDuplicate){
                 uniqueAssocPDGs.insert(pdg); // will only insert if unique
                 hInclusiveAssoc->Fill(pt);
@@ -209,16 +222,16 @@ void tree_handler() {
                 continue; // don't do anything else
             }
 
-            Int_t aStrangeness = map[pdg].strangeness;
+            Int_t aStrangeness = map.at(pdg).strangeness;
             // check if pair is ss or os and fill relevant histo
             if((tStrangeness > 0) != (aStrangeness > 0)){ // opposite sign
                 hSig->Fill(assoc.getAntiName(), abs(aStrangeness));
                 // if K +/-, keep track so we can postprocess K0_S/L bkg
-                if (abs(pdg) == Kminus.getAntiPDG()) map[pdgTrigger].chargedKaonSig++;
+                if (abs(pdg) == Kminus.getAntiPDG()) map.at(pdgTrigger).chargedKaonSig++;
             } else if ((tStrangeness > 0) == (aStrangeness > 0)){ // same sign
                 hBkg->Fill(assoc.getAntiName(), abs(aStrangeness));
                 // if K +/-, keep track so we can postprocess K0_S/L bkg
-                if (abs(pdg) == Kminus.getAntiPDG()) map[pdgTrigger].chargedKaonBkg++;
+                if (abs(pdg) == Kminus.getAntiPDG()) map.at(pdgTrigger).chargedKaonBkg++;
             } else {
                 std::cout << "wtf did you do???" << std::endl;
             }
@@ -251,22 +264,29 @@ void tree_handler() {
     }
 
     // Bkg, normalization, and errors
-    // TODO: add divide by 0 check incase ntriggers, chargedKaonSig = 0
     for (Hadron hadron : hadron_vec){
         Int_t pdg = hadron.getPDG();
         Int_t antipdg = hadron.getAntiPDG();
-        TH1D* hNormalSig = map[pdg].hSig;
-        TH1D* hNormalBkg = map[pdg].hBkg;
-        TH1D* hAntiSig = map[antipdg].hSig;
-        TH1D* hAntiBkg = map[antipdg].hBkg;
+        mapStruct normal, anti;
+        try{
+            normal = map.at(pdg);
+            anti = map.at(antipdg);
+        } catch (std::out_of_range){
+            std::cout << "caught mapstruct at postprocessing!" << std::endl;
+            continue;
+        }
+        TH1D* hNormalSig = normal.hSig;
+        TH1D* hNormalBkg = normal.hBkg;
+        TH1D* hAntiSig = anti.hSig;
+        TH1D* hAntiBkg = anti.hBkg;
 
-        Double_t NNormalTriggers = map[pdg].ntriggers;
-        Double_t NAntiTriggers = map[antipdg].ntriggers;
+        Double_t NNormalTriggers = normal.ntriggers;
+        Double_t NAntiTriggers = anti.ntriggers;
 
         // divide by zero check
-        if(map[pdg].chargedKaonSig > 0 && map[antipdg].chargedKaonSig){
-            Double_t Bkg = map[pdg].chargedKaonBkg*(hNormalSig->GetBinContent(1)/map[pdg].chargedKaonSig);
-            Double_t Bkg1 = map[antipdg].chargedKaonBkg*(hAntiSig->GetBinContent(1)/map[antipdg].chargedKaonSig);
+        if(normal.chargedKaonSig > 0 && anti.chargedKaonSig){
+            Double_t Bkg = normal.chargedKaonBkg*(hNormalSig->GetBinContent(1)/normal.chargedKaonSig);
+            Double_t Bkg1 = anti.chargedKaonBkg*(hAntiSig->GetBinContent(1)/anti.chargedKaonSig);
             hNormalBkg->Fill("K0_S/L", Bkg);
             hNormalBkg->SetBinError(1, sqrt(hNormalBkg->GetBinContent(1))); // manually update bin error
             hAntiBkg->Fill("K0_S/L", Bkg1);
