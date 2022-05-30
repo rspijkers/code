@@ -64,4 +64,26 @@ Hadron Ximinus = Hadron("Xi-", "Xi+", 3312, "#Xi^{-}", "#Xi^{+}", 1321.71);
 Hadron Omegaminus = Hadron("Omega-", "Omega+", 3334, "#Omega^{-}", "#Omega^{+}", 1672.45);
 Hadron Kzeroshort = Hadron("K0_S", 310, "K^{0}_{S}", 497.611);
 Hadron Kzerolong = Hadron("K0_L", 130, "K^{0}_{L}", 497.611);
+
+// more exotic strange hadrons (life is pain):
+// D_s, B_s
+// Xi_c+, Xi_c0, Xi_b+, Xi_b0
+// Omega_c, Omega_cc, Omega_bc, Omega_b, Omega_bb
+// unknown masses are taken from pythia
+Hadron Dsubs = Hadron("Ds-", "Ds+", -431, "D_{s}^{-}", "D_{s}^{+}", 1968.30);
+Hadron Bsubs = Hadron("Bs0", "Bs0bar", 531, "B_{s}^{0}", "#bar{B_{s}^{0}}", 5366.77);
+
+Hadron Xiczero = Hadron("Xic0", "Xic0bar", 4132, "#Xi_{c}^{0}", "#bar{#Xi_{c}^{0}}", 2470.90);
+Hadron Xicplus = Hadron("Xic+", "Xic-", 4232, "#Xi_{c}^{+}", "#Xi_{c}^{-}", 2467.94);
+Hadron Xibzero = Hadron("Xib0", "Xib0bar", 5212, "#Xi_{b}^{0}", "#bar{#Xi_{b}^{0}}", 5791.9);
+Hadron Xibmin = Hadron("Xib-", "Xib+", 5112, "#Xi_{b}^{-}", "#Xi_{b}^{+}", 5797.0);
+
+Hadron Omegac = Hadron("Omegac0", "Omegac0bar", 4332, "#Omega_{c}^{0}", "#bar{#Omega_{c}^{0}}", 2695.2);
+Hadron Omegacc = Hadron("Omegacc+", "Omegacc-", 4332, "#Omega_{cc}^{+}", "#Omega_{cc}^{-}", 3786.63);
+
+Hadron Omegabc = Hadron("Omegabc0", "Omegabc0bar", 5342, "#Omega_{bc}^{0}", "#bar{#Omega_{bc}^{0}", 7190.99);
+
+Hadron Omegab = Hadron("Omegab-", "Omegab+", 5332, "#Omega_{b}^{-}", "#Omega_{b}^{+}", 6046.1);
+Hadron Omegabb = Hadron("Omegabb-", "Omegabb+", 5532, "#Omega_{bb}^{-}", "#Omega_{bb}^{+}", 10602.09);
+
 #endif

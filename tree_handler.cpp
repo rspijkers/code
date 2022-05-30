@@ -15,7 +15,7 @@
 void tree_handler() {
     TH1::SetDefaultSumw2(); // make sure errors are propagated in histo's
     
-    TFile* inputfile = new TFile("output/ssbar_5M_14TeV_monash_ppbar_noEta.root", "READ");
+    TFile* inputfile = new TFile("output/ssbar_5M_14TeV_monash_noEta.root", "READ");
     TTree* tree = (TTree*) inputfile->Get("tree");
     // tree->Print();
     // tree->Show(0);
@@ -27,7 +27,7 @@ void tree_handler() {
         std::cout << "WARNING: non-empty underflow and/or overflow bins in the PDG histogram!!! This means we are not accounting for all particle species. Please investigate" << std::endl;
     }
 
-    TFile* outputfile = new TFile("output/plots_monash_ppbar_test.root", "RECREATE");
+    TFile* outputfile = new TFile("output/plots_monash_test.root", "RECREATE");
 
     // Kinematic cuts
     const Double_t maxEtaTrigger = 2.0;
@@ -52,7 +52,7 @@ void tree_handler() {
     tree->SetBranchAddress("deltaPhi", &deltaPhi);
     tree->SetBranchAddress("deltaEta", &deltaEta);
 
-    std::vector<Hadron> hadron_vec = {Kminus, Lambda, Sigmaminus, Sigmazero, Sigmaplus, Ximinus, Xizero, Omegaminus};
+    std::vector<Hadron> hadron_vec = {Kminus, Lambda, Sigmaminus, Sigmazero, Sigmaplus, Ximinus, Xizero, Omegaminus, Dsubs, Bsubs, Xicplus, Xiczero, Xibmin, Xibzero, Omegac, Omegab, Omegacc, Omegabb, Omegabc};
     const Int_t nbins = hadron_vec.size() + 1; // + 1 for K0_S/L
     
     struct mapStruct
@@ -251,6 +251,7 @@ void tree_handler() {
     }
 
     // Bkg, normalization, and errors
+    // TODO: add divide by 0 check incase ntriggers, chargedKaonSig = 0
     for (Hadron hadron : hadron_vec){
         Int_t pdg = hadron.getPDG();
         Int_t antipdg = hadron.getAntiPDG();
@@ -262,41 +263,42 @@ void tree_handler() {
         Double_t NNormalTriggers = map[pdg].ntriggers;
         Double_t NAntiTriggers = map[antipdg].ntriggers;
 
-        Double_t Bkg = map[pdg].chargedKaonBkg*(hNormalSig->GetBinContent(1)/map[pdg].chargedKaonSig);
-        Double_t Bkg1 = map[antipdg].chargedKaonBkg*(hAntiSig->GetBinContent(1)/map[antipdg].chargedKaonSig);
-        hNormalBkg->Fill("K0_S/L", Bkg);
-        hNormalBkg->SetBinError(1, sqrt(hNormalBkg->GetBinContent(1))); // manually update bin error
-        hAntiBkg->Fill("K0_S/L", Bkg1);
-        hAntiBkg->SetBinError(1, sqrt(hAntiBkg->GetBinContent(1)));// manually update bin error
-
+        // divide by zero check
+        if(map[pdg].chargedKaonSig > 0 && map[antipdg].chargedKaonSig){
+            Double_t Bkg = map[pdg].chargedKaonBkg*(hNormalSig->GetBinContent(1)/map[pdg].chargedKaonSig);
+            Double_t Bkg1 = map[antipdg].chargedKaonBkg*(hAntiSig->GetBinContent(1)/map[antipdg].chargedKaonSig);
+            hNormalBkg->Fill("K0_S/L", Bkg);
+            hNormalBkg->SetBinError(1, sqrt(hNormalBkg->GetBinContent(1))); // manually update bin error
+            hAntiBkg->Fill("K0_S/L", Bkg1);
+            hAntiBkg->SetBinError(1, sqrt(hAntiBkg->GetBinContent(1)));// manually update bin error
+        }
         hNormalSig->Add(hNormalBkg, -1.);
         hAntiSig->Add(hAntiBkg, -1.);
 
         if(hNormalSig->GetBinContent(0) > 0 || hAntiSig->GetBinContent(0) > 0) {
             std::cout << "Warning: non-zero underflow bin detected in trigger" << hadron.getName() << std::endl;
         }
-        // manual error calculation, not necessary if we can fix the K0SL stats
-        // for(Int_t bin = 1; bin < nbins + 1; bin++){
-        //     hNormalSig->SetBinError(bin, sqrt(2*hNormalBkg->GetBinContent(bin) + hNormalSig->GetBinContent(bin)));
-        //     hAntiSig->SetBinError(bin, sqrt(2*hAntiBkg->GetBinContent(bin) + hAntiSig->GetBinContent(bin)));
-        // }
+
         if(hNormalSig->GetBinContent(nbins + 1) > 0 || hAntiSig->GetBinContent(nbins + 1) > 0) {
             std::cout << "Warning: non-zero overflow bin detected in trigger" << hadron.getName() << std::endl;
         }
-        // std::cout << hNormalSig->GetBinError(2) << std::endl;
-        // hNormalSig->Add(hAntiSig, 1.);
-        // hNormalSig->Write();
-        Double_t errNormal, errAnti;
-        Double_t ratio = hNormalSig->IntegralAndError(0, nbins, errNormal)/NNormalTriggers;
-        Double_t ratio1 = hAntiSig->IntegralAndError(0, nbins, errAnti)/NAntiTriggers;
-        errNormal /= NNormalTriggers; errAnti /= NAntiTriggers;
-        std::cout << hadron.getName() << ": " << ratio << " +/- " << errNormal << " found with ntriggers = " << map[pdg].ntriggers << std::endl;
-        std::cout << hadron.getAntiName() << ": " << ratio1 << " +/- " << errAnti << " found with ntriggers = " << map[antipdg].ntriggers << std::endl;
+
+        Double_t ratio, ratio1, errNormal, errAnti;
+        // divide by zero check
+        if (NNormalTriggers > 0 && NAntiTriggers > 0){
+            ratio = hNormalSig->IntegralAndError(0, nbins, errNormal)/NNormalTriggers;
+            ratio1 = hAntiSig->IntegralAndError(0, nbins, errAnti)/NAntiTriggers;
+            errNormal /= NNormalTriggers; errAnti /= NAntiTriggers;
+            std::cout << hadron.getName() << ": " << ratio << " +/- " << errNormal << " found with ntriggers = " << NNormalTriggers << std::endl;
+            std::cout << hadron.getAntiName() << ": " << ratio1 << " +/- " << errAnti << " found with ntriggers = " << NAntiTriggers << std::endl;
+        } else { 
+            std::cout << "No triggers found for " << hadron.getName() << " and/or " << hadron.getAntiName() << std::endl;
+        }
     }
 
     // list all the possible pdgs for both trigger and assoc:
-    std::cout << "number of unique strange trigger hadrons found, should be " << 2*nbins << ": " << uniqueTriggerPDGs.size() << std::endl;
-    std::cout << "number of unique strange trigger hadrons found, should be " << 2*nbins << ": " << uniqueAssocPDGs.size() << std::endl;
+    std::cout << "number of unique strange trigger hadrons found, should be at most " << 2*nbins << ": " << uniqueTriggerPDGs.size() << std::endl;
+    std::cout << "number of unique strange trigger hadrons found, should be at most " << 2*nbins << ": " << uniqueAssocPDGs.size() << std::endl;
     // for(Int_t pdg : uniqueTriggerPDGs){std:: cout << pdg << std::endl;}
     // for(Int_t pdg : uniqueAssocPDGs){std:: cout << pdg << std::endl;}
     
