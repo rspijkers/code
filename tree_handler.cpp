@@ -15,7 +15,7 @@
 void tree_handler() {
     TH1::SetDefaultSumw2(); // make sure errors are propagated in histo's
     
-    TFile* inputfile = new TFile("output/Monash_ppbar_tau0_001_10299332.root", "READ");
+    TFile* inputfile = new TFile("output/ssbar_5M_14TeV_monash_ppbar_noEta.root", "READ");
     TTree* tree = (TTree*) inputfile->Get("tree");
     // tree->Print();
     // tree->Show(0);
@@ -27,7 +27,7 @@ void tree_handler() {
         std::cout << "WARNING: non-empty underflow and/or overflow bins in the PDG histogram!!! This means we are not accounting for all particle species. Please investigate" << std::endl;
     }
 
-    TFile* outputfile = new TFile("output/plots_monash_test.root", "RECREATE");
+    TFile* outputfile = new TFile("output/plots_monash_ppbar_test.root", "RECREATE");
 
     // Kinematic cuts
     const Double_t maxEtaTrigger = 2.0;
@@ -83,20 +83,20 @@ void tree_handler() {
     TH1D* hLbarLbardphi = new TH1D("hLbarLbardphi", "deltaphi for Lbar-Lbar", 50, -0.5*PI, 1.5*PI);
 
     // TODO: implement the same dphi histo's for the following pairs: L-K, L-S^min, K-K
-    TH1D* hLKmindphi = new TH1D("hLKmindphi", "deltaphi for L-Kmin", 50, -0.5*PI, 1.5*PI);
-    TH1D* hLKplusdphi = new TH1D("hLKplusdphi", "deltaphi for L-Kplus", 50, -0.5*PI, 1.5*PI);
-    TH1D* hLbarKmindphi = new TH1D("hLbarKmindphi", "deltaphi for Lbar-Kmin", 50, -0.5*PI, 1.5*PI);
-    TH1D* hLbarKplusdphi = new TH1D("hLbarKplusdphi", "deltaphi for Lbar-Kplus", 50, -0.5*PI, 1.5*PI);
+    TH1D* hLKdphi = new TH1D("hLKdphi", "deltaphi for L-Kmin", 50, -0.5*PI, 1.5*PI);
+    TH1D* hLKbardphi = new TH1D("hLKbardphi", "deltaphi for L-Kplus", 50, -0.5*PI, 1.5*PI);
+    TH1D* hLbarKdphi = new TH1D("hLbarKdphi", "deltaphi for Lbar-Kmin", 50, -0.5*PI, 1.5*PI);
+    TH1D* hLbarKbardphi = new TH1D("hLbarKbardphi", "deltaphi for Lbar-Kplus", 50, -0.5*PI, 1.5*PI);
 
     TH1D* hLSdphi = new TH1D("hLSdphi", "deltaphi for L-Sigmamin", 50, -0.5*PI, 1.5*PI);
     TH1D* hLSbardphi = new TH1D("hLSbardphi", "deltaphi for L-Sigmaminbar", 50, -0.5*PI, 1.5*PI);
     TH1D* hLbarSdphi = new TH1D("hLbarSdphi", "deltaphi for Lbar-Sigmamin", 50, -0.5*PI, 1.5*PI);
     TH1D* hLbarSbardphi = new TH1D("hLbarSbardphi", "deltaphi for Lbar-Sigmaminbar", 50, -0.5*PI, 1.5*PI);
 
-    TH1D* hKminKmindphi = new TH1D("hKminKmindphi", "deltaphi for Kmin-Kmin", 50, -0.5*PI, 1.5*PI);
-    TH1D* hKminKplusdphi = new TH1D("hKminKplusdphi", "deltaphi for Kmin-Kplus", 50, -0.5*PI, 1.5*PI);
-    TH1D* hKplusKmindphi = new TH1D("hKplusKmindphi", "deltaphi for Kplus-Kmin", 50, -0.5*PI, 1.5*PI);
-    TH1D* hKplusKplusdphi = new TH1D("hKplusKplusdphi", "deltaphi for Kplus-Kplus", 50, -0.5*PI, 1.5*PI);
+    TH1D* hKKdphi = new TH1D("hKKdphi", "deltaphi for Kmin-Kmin", 50, -0.5*PI, 1.5*PI);
+    TH1D* hKKbardphi = new TH1D("hKKbardphi", "deltaphi for Kmin-Kplus", 50, -0.5*PI, 1.5*PI);
+    TH1D* hKbarKdphi = new TH1D("hKbarKdphi", "deltaphi for Kplus-Kmin", 50, -0.5*PI, 1.5*PI);
+    TH1D* hKbarKbardphi = new TH1D("hKbarKbardphi", "deltaphi for Kplus-Kplus", 50, -0.5*PI, 1.5*PI);
 
 
     TH1D* hTemp = new TH1D("template", "template", nbins, 0, nbins); 
@@ -127,10 +127,7 @@ void tree_handler() {
         
         Int_t pdg = hadron.getPDG();
         Int_t abspdg = abs(pdg);
-        Int_t strange;
-        if(abspdg < 3300) strange = 1;
-        else if(abspdg < 3330) strange = 2;
-        else strange = 3;
+        Int_t strange = strangenessFromPDG(pdg);
 
         // normal pdg
         mapStruct normal;
@@ -166,7 +163,7 @@ void tree_handler() {
         try{
             trigger = map.at(pdgTrigger).hadron;
         } catch (std::out_of_range){
-            std::cout << "caught trigger! pdg = " << pdgTrigger << std::endl;
+            std::cout << "Unknown trigger hadron! pdg = " << pdgTrigger << ". Skipping this iteration..." << std::endl;
             continue;
         }
         hInclusiveTrigger->Fill(pTTrigger);
@@ -203,7 +200,7 @@ void tree_handler() {
             try{
                 assoc = map.at(pdg).hadron;
             } catch (std::out_of_range){
-                std::cout << "caught assoc! pdg = " << pdg << std::endl;
+                std::cout << "Unknown associated hadron! pdg = " << pdg << ". Skipping this iteration..." << std::endl;
                 continue;
             }
             if(!isDuplicate){
@@ -240,25 +237,25 @@ void tree_handler() {
             if(pdgTrigger == Lambda.getPDG()){
                 if(pdg == Lambda.getPDG()){hLLdphi->Fill((*deltaPhi)[j]);} // LL
                 else if(pdg == Lambda.getAntiPDG()){hLLbardphi->Fill((*deltaPhi)[j]);} // LLbar
-                else if(pdg == Kminus.getPDG()){hLKmindphi->Fill((*deltaPhi)[j]);} // LK
-                else if(pdg == Kminus.getAntiPDG()){hLKplusdphi->Fill((*deltaPhi)[j]);} // LKbar
+                else if(pdg == Kminus.getPDG()){hLKdphi->Fill((*deltaPhi)[j]);} // LK
+                else if(pdg == Kminus.getAntiPDG()){hLKbardphi->Fill((*deltaPhi)[j]);} // LKbar
                 else if(pdg == Sigmaminus.getPDG()){hLSdphi->Fill((*deltaPhi)[j]);} // LS
                 else if(pdg == Sigmaminus.getAntiPDG()){hLSbardphi->Fill((*deltaPhi)[j]);} // LSbar
             } else if(pdgTrigger == Lambda.getAntiPDG()){
                 if(pdg == Lambda.getPDG()){hLbarLdphi->Fill((*deltaPhi)[j]);} // LbarL
                 else if(pdg == Lambda.getAntiPDG()){hLbarLbardphi->Fill((*deltaPhi)[j]);} // LbarLbar
-                else if(pdg == Kminus.getPDG()){hLbarKmindphi->Fill((*deltaPhi)[j]);} // LbarK
-                else if(pdg == Kminus.getAntiPDG()){hLbarKplusdphi->Fill((*deltaPhi)[j]);} // LbarKbar
+                else if(pdg == Kminus.getPDG()){hLbarKdphi->Fill((*deltaPhi)[j]);} // LbarK
+                else if(pdg == Kminus.getAntiPDG()){hLbarKbardphi->Fill((*deltaPhi)[j]);} // LbarKbar
                 else if(pdg == Sigmaminus.getPDG()){hLbarSdphi->Fill((*deltaPhi)[j]);} // LbarS
                 else if(pdg == Sigmaminus.getAntiPDG()){hLbarSbardphi->Fill((*deltaPhi)[j]);} // LbarSbar
             }
             // Kaon corr.
             else if(pdgTrigger == Kminus.getPDG()){
-                if(pdg == Kminus.getPDG()){hKminKmindphi->Fill((*deltaPhi)[j]);} // KminKmin
-                else if(pdg == Kminus.getAntiPDG()){hKminKplusdphi->Fill((*deltaPhi)[j]);} // KminKplus
+                if(pdg == Kminus.getPDG()){hKKdphi->Fill((*deltaPhi)[j]);} // KminKmin
+                else if(pdg == Kminus.getAntiPDG()){hKKbardphi->Fill((*deltaPhi)[j]);} // KminKplus
             } else if(pdgTrigger == Kminus.getAntiPDG()){
-                if(pdg == Kminus.getPDG()){hKplusKmindphi->Fill((*deltaPhi)[j]);} // KplusKmin
-                else if(pdg == Kminus.getAntiPDG()){hKplusKplusdphi->Fill((*deltaPhi)[j]);} // KplusKplus
+                if(pdg == Kminus.getPDG()){hKbarKdphi->Fill((*deltaPhi)[j]);} // KplusKmin
+                else if(pdg == Kminus.getAntiPDG()){hKbarKbardphi->Fill((*deltaPhi)[j]);} // KplusKplus
             }
         }
     }
@@ -318,7 +315,7 @@ void tree_handler() {
 
     // list all the possible pdgs for both trigger and assoc:
     std::cout << "number of unique strange trigger hadrons found, should be at most " << 2*nbins << ": " << uniqueTriggerPDGs.size() << std::endl;
-    std::cout << "number of unique strange trigger hadrons found, should be at most " << 2*nbins << ": " << uniqueAssocPDGs.size() << std::endl;
+    std::cout << "number of unique strange assoc hadrons found, should be at most " << 2*nbins << ": " << uniqueAssocPDGs.size() << std::endl;
     // for(Int_t pdg : uniqueTriggerPDGs){std:: cout << pdg << std::endl;}
     // for(Int_t pdg : uniqueAssocPDGs){std:: cout << pdg << std::endl;}
     
