@@ -115,7 +115,6 @@ int main(int argc, char** argv)
 			hEtaPt->Fill(parteta,partpT);
 			int netStrange = strangenessFromPDG(partpdg); // not yet net strangeness
 			if(netStrange == 0) continue; // strangeness check
-			if(iEvent < 10) cout << iEvent << ": " << partpdg << endl;
 			// check the net strangeness
 			if(partpdg == 310 || partpdg == 130) netStrange = 0; // K0_S/L
 			else if(abs(partpdg) == 321 || abs(partpdg) == 431 || abs(partpdg) == 311) netStrange *= -1; // switch if kaon or D_s, PDG convention
@@ -135,11 +134,12 @@ int main(int argc, char** argv)
 			// Clear the vectors with the associated/correlation variables
 			pdgAssoc.clear(); pTAssoc.clear(); etaAssoc.clear(); deltaPhi.clear(); deltaEta.clear();
 			for(int jPart = 0; jPart < nPart; jPart++) {
+				if(jPart == iPart) continue; // don't correlate particle with itself
 				const Particle &part2 = pythia.event[jPart];
 				Double_t part2pT = part2.pT();
 				Double_t part2eta = part2.eta();
 				Int_t part2pdg = part2.id();
-				if(IsStrange(part2pdg) && part2.isFinal() && partpT > part2pT && part2pT > pTminAssoc){
+				if(IsStrange(part2pdg) && part2.isFinal() && part2pT > pTminAssoc){
 					Double_t dPhi = std::fmod(part.phi() - part2.phi() + 2.5*PI, 2*PI) - 0.5*PI; 
 					Double_t dEta = parteta - part2eta;
 					pdgAssoc.push_back(part2pdg);
