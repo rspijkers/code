@@ -69,48 +69,38 @@ void compare() {
         c->Write();
     }
 
-    // Do some specific Lambda deltaphi stuff
-    TCanvas *cL = new TCanvas("Lambda_monash", "Lambda", 800, 800);
-    TCanvas *cLbar = new TCanvas("Lambdabar_monash", "Lambdabar", 800, 800);
-    THStack *Lstack = new THStack("Lambda_monash", "Lambda trigger correlations monash");
-    THStack *Lbarstack = new THStack("Lambdabar_monash", "Lambdabar trigger correlations monash");
-    TH1D* hbkg = (TH1D*) monash->Get("hLLdphi");
-    TH1D* hsig = (TH1D*) monash->Get("hLLbardphi");
-    hsig->SetLineColor(kRed+1);
-    TH1D* hsigbar = (TH1D*) monash->Get("hLbarLdphi");
-    hsigbar->SetLineColor(kRed+1);
-    TH1D* hbkgbar = (TH1D*) monash->Get("hLbarLbardphi");
+    // generalize the following code to include these combi's: Lambda-Kaon, Lambda-Sigma, Kaon-Kaon (Lambda-Lambda)
+    TString correlations[4][2] = {{"Lambda", "Lambda"}, {"Lambda", "Kaon"}, {"Lambda", "Sigma"}, {"Kaon", "Kaon"}};
+    for (auto corr : correlations){
+        // close your eyes, this is ugly
+        TString trigger = TString(corr[0][0]); TString assoc = TString(corr[1][0]);
+        TString signame = TString("h"+trigger+assoc+"bardphi");
+        TString sigbarname = TString("h"+trigger+"bar"+assoc+"dphi");
+        TString bkgname = TString("h"+trigger+assoc+"dphi");
+        TString bkgbarname = TString("h"+trigger+"bar"+assoc+"bardphi");
+        // okay you can open your eyes again
+        for(auto production : {monash, monashppbar}){
+            TString prodname = production->GetCustomName();
+            // nevermind the string fuckery continues
+            TCanvas *c = new TCanvas("c", corr[0]+" - "+corr[1]+" correlations in "+prodname, 800, 800);
+            TCanvas *cbar = new TCanvas("cbar", corr[0]+"bar - "+corr[1]+" correlations in "+prodname, 800, 800);
+            THStack *stack = new THStack("stack", corr[0]+" - "+corr[1]+" correlations in "+prodname);
+            THStack *stackbar = new THStack("stackbar", corr[0]+"bar - "+corr[1]+" correlations in "+prodname);
+            TH1D* hbkg = (TH1D*) production->Get(bkgname); hbkg->SetLineColor(kBlack);
+            TH1D* hsig = (TH1D*) production->Get(signame); hsig->SetLineColor(kRed+1);
+            TH1D* hsigbar = (TH1D*) production->Get(sigbarname); hsigbar->SetLineColor(kRed+1);
+            TH1D* hbkgbar = (TH1D*) production->Get(bkgbarname); hbkgbar->SetLineColor(kBlack);
 
-    Lstack->Add(hsig); Lstack->Add(hbkg);
-    Lbarstack->Add(hsigbar); Lbarstack->Add(hbkgbar);
-    cL->cd();
-    Lstack->Draw("nostack E1");
-    cL->Write();
-    cLbar->cd();
-    Lbarstack->Draw("nostack E1");
-    cLbar->Write();
-
-    // repurpose the pointers to do the same in ppbar
-    cL = new TCanvas("Lambda_monashppbar", "Lambda", 800, 800);
-    cLbar = new TCanvas("Lambdabar_monashppbar", "Lambdabar", 800, 800);
-    Lstack = new THStack("Lambda_monashppbar", "Lambda trigger correlations monashppbar");
-    Lbarstack = new THStack("Lambdabar_monashppbar", "Lambdabar trigger correlations monashppbar");
-    hbkg = (TH1D*) monashppbar->Get("hLLdphi");
-    hbkg->SetLineColor(kBlack);
-    hsig = (TH1D*) monashppbar->Get("hLLbardphi");
-    hsigbar = (TH1D*) monashppbar->Get("hLbarLdphi");
-    hbkgbar = (TH1D*) monashppbar->Get("hLbarLbardphi");
-    hbkgbar->SetLineColor(kBlack);
-
-
-    Lstack->Add(hsig); Lstack->Add(hbkg);
-    Lbarstack->Add(hsigbar); Lbarstack->Add(hbkgbar);
-    cL->cd();
-    Lstack->Draw("nostack E1");
-    cL->Write();
-    cLbar->cd();
-    Lbarstack->Draw("nostack E1");
-    cLbar->Write();
+            stack->Add(hsig); stack->Add(hbkg);
+            stackbar->Add(hsigbar); stackbar->Add(hbkgbar);
+            c->cd();
+            stack->Draw("nostack E1");
+            c->Write();
+            cbar->cd();
+            stackbar->Draw("nostack E1");
+            cbar->Write();
+        }
+    }
 
     for(TFile *file : infiles) file->Close();
     outfile->Close();

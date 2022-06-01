@@ -66,10 +66,6 @@ Hadron Kzeroshort = Hadron("K0_S", 310, "K^{0}_{S}", 497.611);
 Hadron Kzerolong = Hadron("K0_L", 130, "K^{0}_{L}", 497.611);
 
 // more exotic strange hadrons (life is pain):
-// D_s, B_s
-// Xi_c+, Xi_c0, Xi_b+, Xi_b0
-// Omega_c, Omega_cc, Omega_bc, Omega_b, Omega_bb
-// All the sigmas...
 // unknown masses are taken from pythia
 Hadron Dsubs = Hadron("Ds-", "Ds+", -431, "D_{s}^{-}", "D_{s}^{+}", 1968.30);
 Hadron Bsubs = Hadron("Bs0", "Bs0bar", 531, "B_{s}^{0}", "#bar{B_{s}^{0}}", 5366.77);
