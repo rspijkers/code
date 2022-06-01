@@ -53,7 +53,8 @@ class Hadron {
 
 
 // declare the hadrons needed for analysis
-Hadron Kzero = Hadron("K0", "K0bar", 311, "K^{0}", "#bar{K^{0}}", 497.611);
+// Hadron Kzero = Hadron("K0", "K0bar", 311, "K^{0}", "#bar{K^{0}}", 497.611); // this is an antistrange hadron!
+Hadron Kzerobar = Hadron("K0bar", "K0", -311, "#bar{K^{0}}", "K^{0}", 497.611);
 Hadron Kminus = Hadron("K-", "K+", -321, "K^{-}", "K^{+}", 493.677);
 Hadron Lambda = Hadron("Lambda", "Lambdabar", 3122, "#Lambda", "#bar{#Lambda}", 1115.683);
 Hadron Sigmazero = Hadron("Sigma0", "Sigma0bar", 3212, "#Sigma^{0}", "#bar{#Sigma^{0}}", 1192.642);

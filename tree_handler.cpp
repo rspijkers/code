@@ -52,8 +52,8 @@ void tree_handler() {
     tree->SetBranchAddress("deltaPhi", &deltaPhi);
     tree->SetBranchAddress("deltaEta", &deltaEta);
 
-    std::vector<Hadron> hadron_vec = {Kminus, Lambda, Sigmaminus, Sigmazero, Sigmaplus, Ximinus, Xizero, Omegaminus, Dsubs, Bsubs, Xicplus, Xiczero, Xibmin, Xibzero, Omegac, Omegab, Omegacc, Omegabb, Omegabc};
-    const Int_t nbins = hadron_vec.size() + 1; // + 1 for K0_S/L
+    std::vector<Hadron> hadron_vec = {Kzerobar, Kminus, Lambda, Sigmaminus, Sigmazero, Sigmaplus, Ximinus, Xizero, Omegaminus, Dsubs, Bsubs, Xicplus, Xiczero, Xibmin, Xibzero, Omegac, Omegab, Omegacc, Omegabb, Omegabc};
+    const Int_t nbins = hadron_vec.size();
     
     struct mapStruct
     {
@@ -63,8 +63,6 @@ void tree_handler() {
         Int_t strangeness;
 
         Int_t ntriggers = 0;
-        Double_t chargedKaonBkg = 0;
-        Double_t chargedKaonSig = 0;
     };
 
     TH1D* hInclusiveTrigger = new TH1D("hInclusiveTrigger", "Inclusive transverse momentum spectrum for trigger hadrons", 100, 0, 25);
@@ -102,10 +100,9 @@ void tree_handler() {
     TH1D* hTemp = new TH1D("template", "template", nbins, 0, nbins); 
     // hTemp->SetOption("HIST E");
     TAxis* ax = hTemp->GetXaxis();
-    ax->SetBinLabel(1, "K0_S/L");
-    for (Int_t i = 0; i < nbins - 1; i++){
-        // 0th bin is underflow, 1st bin is K0_S/L, so start with i + 2
-        ax->SetBinLabel(i + 2, hadron_vec[i].getAntiName());
+    for (Int_t i = 0; i < nbins; i++){
+        // 0th bin is underflow, so start with i + 1
+        ax->SetBinLabel(i + 1, hadron_vec[i].getAntiName());
     } 
     std::unordered_map<Int_t, mapStruct> map; 
     for (Hadron hadron : hadron_vec) {
@@ -146,11 +143,6 @@ void tree_handler() {
         map[-1*pdg] = anti;
     }
     // hTemp->Delete();
-    mapStruct k0shortstruct, k0longstruct;
-    k0shortstruct.hadron = Kzeroshort;
-    k0longstruct.hadron = Kzerolong;
-    map[Kzeroshort.getPDG()] = k0shortstruct;
-    map[Kzerolong.getPDG()] = k0longstruct;
 
     const Long64_t nentries = tree->GetEntries(); 
     Double_t pTDuplicateCheck = -1;
@@ -181,9 +173,6 @@ void tree_handler() {
 
         // kine cuts before proceeding, for perfomance
         // if(etaTrigger > maxEtaTrigger) continue;
-        // exception for K0_S/L
-        if(pdgTrigger == Kzerolong.getPDG() || pdgTrigger == Kzeroshort.getPDG()) continue; 
-        // || pdgTrigger == Kminus.getPDG()  || pdgTrigger == Kminus.getAntiPDG()
         if(pdgTrigger > 1000) {hEtaNormal->Fill(etaTrigger);}
         else if(pdgTrigger < -1000) {hEtaAnti->Fill(etaTrigger);}
 
@@ -213,22 +202,13 @@ void tree_handler() {
 
             // kine cuts
             // if(eta > maxEtaAssoc) continue;
-            // exception for K0_S/L
-            if(pdg == Kzerolong.getPDG() || pdg == Kzeroshort.getPDG()){
-                hSig->Fill("K0_S/L", 0.5); // K0_S/L counts as half strange
-                continue; // don't do anything else
-            }
 
             Int_t aStrangeness = map.at(pdg).strangeness;
             // check if pair is ss or os and fill relevant histo
             if((tStrangeness > 0) != (aStrangeness > 0)){ // opposite sign
                 hSig->Fill(assoc.getAntiName(), abs(aStrangeness));
-                // if K +/-, keep track so we can postprocess K0_S/L bkg
-                if (abs(pdg) == Kminus.getAntiPDG()) map.at(pdgTrigger).chargedKaonSig++;
             } else if ((tStrangeness > 0) == (aStrangeness > 0)){ // same sign
                 hBkg->Fill(assoc.getAntiName(), abs(aStrangeness));
-                // if K +/-, keep track so we can postprocess K0_S/L bkg
-                if (abs(pdg) == Kminus.getAntiPDG()) map.at(pdgTrigger).chargedKaonBkg++;
             } else {
                 std::cout << "wtf did you do???" << std::endl;
             }
@@ -280,15 +260,6 @@ void tree_handler() {
         Double_t NNormalTriggers = normal.ntriggers;
         Double_t NAntiTriggers = anti.ntriggers;
 
-        // divide by zero check
-        if(normal.chargedKaonSig > 0 && anti.chargedKaonSig){
-            Double_t Bkg = normal.chargedKaonBkg*(hNormalSig->GetBinContent(1)/normal.chargedKaonSig);
-            Double_t Bkg1 = anti.chargedKaonBkg*(hAntiSig->GetBinContent(1)/anti.chargedKaonSig);
-            hNormalBkg->Fill("K0_S/L", Bkg);
-            hNormalBkg->SetBinError(1, sqrt(hNormalBkg->GetBinContent(1))); // manually update bin error
-            hAntiBkg->Fill("K0_S/L", Bkg1);
-            hAntiBkg->SetBinError(1, sqrt(hAntiBkg->GetBinContent(1)));// manually update bin error
-        }
         hNormalSig->Add(hNormalBkg, -1.);
         hAntiSig->Add(hAntiBkg, -1.);
 
