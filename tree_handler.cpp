@@ -149,7 +149,11 @@ void tree_handler() {
     for(Long64_t i = 0; i < nentries; i++) {
         tree->GetEntry(i);
         // inclusive spectra before kine cuts
+        // We may still find K0_S/L from decays, these will only come from hadrons that are neutral in strangeness (???)
+        // so we are free to just skip them
+        if(pdgTrigger == 130 || pdgTrigger == 310) continue;
         uniqueTriggerPDGs.insert(pdgTrigger); // will only insert if unique
+
         Hadron trigger;
         // try to access element of map. if doesn't exist, skip this entire iteration
         try{
@@ -185,6 +189,10 @@ void tree_handler() {
             Int_t pdg = (*pdgAssoc)[j];
             Double_t eta = (*etaAssoc)[j];
             Double_t pt = (*pTAssoc)[j];
+            // We may still find K0_S/L from decays, these will only come from hadrons that are neutral in strangeness (???)
+            // so we are free to just skip them
+            if(pdg == 130 || pdg == 310) continue;
+
             Hadron assoc;
             try{
                 assoc = map.at(pdg).hadron;
