@@ -46,7 +46,7 @@ SoftQCD:elastic = off                         ! Elastic off
 
 ! Decay Supression
 ParticleDecays:limitTau0 = on          ! Only particles with tau0 < tau0Max are decayed.
-ParticleDecays:tau0Max = 3.            ! Tau0Max = 3. mm/c
+ParticleDecays:tau0Max = 0.01          ! tau0Max of 0.01 will stop all weak decays, allowing us to directly count charm/beauty hadrons. 
 
 ! strange hadron decays off
 ! Note that K0 (K0bar) are allowed to decay!
