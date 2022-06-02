@@ -43,7 +43,6 @@ int main(int argc, char** argv)
 
 	// TODO: check if argument is a valid path?
 
-	int mecorr=1;
 	const Double_t pTminTrigg = 4.;
 	const Double_t pTminAssoc = 0.;
 	// Note that there is no eta cut, we will implement this after the run
@@ -61,6 +60,7 @@ int main(int argc, char** argv)
 
 	//ME corrections
 	//use of matrix corrections where available
+	int mecorr=1;
 	if(mecorr==0){
 		pythia.readString("TimeShower:MECorrections=off");
 	}
@@ -74,12 +74,10 @@ int main(int argc, char** argv)
 
 	// Output histo's
   	TH2D *hEtaPt = new TH2D("hEtaPt","p_{T} vs #eta for all particles;#eta;p_{T} (GeV/c)", 40, -4., 4., 50, 0, 10);
-	TH1D *hPDG = new TH1D("hPDG", "PDG code for trigger strange hadrons", 8000, -4000, 4000); 
-	TH1D *hPDGAssoc = new TH1D("hPDGAssoc", "PDG code for associated strange hadrons", 8000, -4000, 4000); // use Double_t to get around maximum bin content of Int_t
+	TH1D *hPDG = new TH1D("hPDG", "PDG code for trigger strange hadrons", 12000, -6000, 6000); 
+	TH1D *hPDGAssoc = new TH1D("hPDGAssoc", "PDG code for associated strange hadrons", 12000, -6000, 6000); // use Double_t to get around maximum bin content of Int_t
 	TH1I *hStrangenessPerEvent = new TH1I("hStrangenessPerEvent", "net strangeness per event", 21, -10.5, 10.5);
 
-	// TODO: create tree to save all the data of trigger/assoc pairs to
-	// not sure how to handle multiple assocs per trigger
 	Int_t partpdg;
 	Double_t partpT;
 	Double_t parteta;
@@ -119,7 +117,7 @@ int main(int argc, char** argv)
 			if(netStrange == 0) continue; // strangeness check
 			// check the net strangeness
 			if(partpdg == 310 || partpdg == 130) netStrange = 0; // K0_S/L
-			else if(abs(partpdg) == 321 || abs(partpdg) == 431 || abs(partpdg) == 311) netStrange *= -1; // switch if kaon or D_s, PDG convention
+			else if(abs(partpdg) == 321 || abs(partpdg) == 311 || abs(partpdg) == 431) netStrange *= -1; // switch if kaon or D_s, PDG convention
 			else if(netStrange == 2 && getDigitN(partpdg, 3) == 0) continue; // if a meson has 2 strange quarks, it is an ssbar state thus net zero strangeness
 
 			int signpdg = 1;
@@ -142,23 +140,25 @@ int main(int argc, char** argv)
 				Double_t part2eta = part2.eta();
 				Int_t part2pdg = part2.id();
 				if(IsStrange(part2pdg) && part2.isFinal() && part2pT > pTminAssoc){
-					Double_t dPhi = std::fmod(part.phi() - part2.phi() + 2.5*PI, 2*PI) - 0.5*PI; 
+					Double_t dPhi = std::fmod(part.phi() - part2.phi() + 2.5*PI, 2*PI) - 0.5*PI;  // make dedicated function to do this
 					Double_t dEta = parteta - part2eta;
 					pdgAssoc.push_back(part2pdg);
 					pTAssoc.push_back(part2pT);
 					etaAssoc.push_back(part2eta);
 					deltaPhi.push_back(dPhi);
 					deltaEta.push_back(dEta);
-					if(triggersPerEvent == 1) hPDGAssoc->Fill(part2pdg);
 				}
 			} // end assoc loop
+			// only fill the associated pdg's once per event
+			if(triggersPerEvent == 1) for(int x : pdgAssoc) hPDGAssoc->Fill(x);
+			// if(iEvent<100) for(int x : pdgAssoc) cout << iEvent << ": " << x << endl;
 			tree->Fill();
 		} // end trigger loop
 		hStrangenessPerEvent->Fill(strangenessPerEvent);
 	} // end event loop
 
 	outFile->Write();
-	cout << "Tree written to file " << outFile->GetName() << endl;
+	cout << "Output written to file " << outFile->GetName() << endl;
 	outFile->Close();
 
 	// stop keeping track of time, and calculate how long it took
