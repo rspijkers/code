@@ -15,7 +15,7 @@
 void tree_handler() {
     TH1::SetDefaultSumw2(); // make sure errors are propagated in histo's
     
-    TFile* inputfile = new TFile("output/ssbar_5M_14TeV_monash_ppbar_noEta.root", "READ");
+    TFile* inputfile = new TFile("500ktest.root", "READ");
     TTree* tree = (TTree*) inputfile->Get("tree");
     // tree->Print();
     // tree->Show(0);
@@ -27,7 +27,7 @@ void tree_handler() {
         std::cout << "WARNING: non-empty underflow and/or overflow bins in the PDG histogram!!! This means we are not accounting for all particle species. Please investigate" << std::endl;
     }
 
-    TFile* outputfile = new TFile("output/plots_monash_ppbar_test.root", "RECREATE");
+    TFile* outputfile = new TFile("test_handler.root", "RECREATE");
 
     // Kinematic cuts
     const Double_t maxEtaTrigger = 2.0;
@@ -215,7 +215,9 @@ void tree_handler() {
             // if(eta > maxEtaAssoc) continue;
             // exception for K0_S/L
             if(pdg == Kzerolong.getPDG() || pdg == Kzeroshort.getPDG()){
-                hSig->Fill("K0_S/L", 0.5); // K0_S/L counts as half strange
+                // we use the number of pairs with K0_S/L to estimate the error therefor we fill the bkg histo
+                // the signal of K0_S/L is calculated by using conservation of strangeness, we don't need to do fill any signal histo here
+                hBkg->Fill("K0_S/L", 0.5); // K0_S/L counts as half strange
                 continue; // don't do anything else
             }
 
@@ -280,17 +282,24 @@ void tree_handler() {
         Double_t NNormalTriggers = normal.ntriggers;
         Double_t NAntiTriggers = anti.ntriggers;
 
-        // divide by zero check
-        if(normal.chargedKaonSig > 0 && anti.chargedKaonSig){
-            Double_t Bkg = normal.chargedKaonBkg*(hNormalSig->GetBinContent(1)/normal.chargedKaonSig);
-            Double_t Bkg1 = anti.chargedKaonBkg*(hAntiSig->GetBinContent(1)/anti.chargedKaonSig);
-            hNormalBkg->Fill("K0_S/L", Bkg);
-            hNormalBkg->SetBinError(1, sqrt(hNormalBkg->GetBinContent(1))); // manually update bin error
-            hAntiBkg->Fill("K0_S/L", Bkg1);
-            hAntiBkg->SetBinError(1, sqrt(hAntiBkg->GetBinContent(1)));// manually update bin error
-        }
+        // so now that we use strangeness conservation to determine the K0_S/L bins, how would we do this if we scale the background to account for L/Lbar asymmetry?
+        // first scaling then using conservation, or vice versa?
+        // Also, how do we propagate the uncertainties that come from estimating the scaling factor?
+
         hNormalSig->Add(hNormalBkg, -1.);
         hAntiSig->Add(hAntiBkg, -1.);
+
+        // so, instead of this funky K0_S/L handling, we can try to use a missing energy technique: assigning all strangeness we miss to the K0_S/L
+        // compare integral of hSig (after bkg subtraction) to ntriggers, and assign the difference to the K0_S/L bin. 
+        // as for the statistical error, we can use the number of K0_S/L pairs we find maybe?
+        int NormalMissingStrange = NNormalTriggers*normal.strangeness - hNormalSig->Integral(2, nbins); // skip the K0_S/L bin in integration
+        int AntiMissingStrange = -NAntiTriggers*anti.strangeness - hAntiSig->Integral(2, nbins); // skip the K0_S/L bin in integration
+        hNormalSig->SetBinContent(1, NormalMissingStrange); 
+        Double_t K0Error = sqrt(NormalMissingStrange + 2*hNormalBkg->GetBinContent(1)); // calculate errors as sqrt(signal + 2*bkg)
+        hNormalSig->SetBinError(1, K0Error); 
+        hAntiSig->SetBinContent(1, AntiMissingStrange); 
+        K0Error = sqrt(NormalMissingStrange + 2*hNormalBkg->GetBinContent(1)); // calculate errors as sqrt(signal + 2*bkg)
+        hAntiSig->SetBinError(1, K0Error); 
 
         if(hNormalSig->GetBinContent(0) > 0 || hAntiSig->GetBinContent(0) > 0) {
             std::cout << "Warning: non-zero underflow bin detected in trigger" << hadron.getName() << std::endl;
