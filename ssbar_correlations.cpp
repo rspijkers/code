@@ -74,8 +74,8 @@ int main(int argc, char** argv)
 
 	// Output histo's
   	TH2D *hEtaPt = new TH2D("hEtaPt","p_{T} vs #eta for all particles;#eta;p_{T} (GeV/c)", 40, -4., 4., 50, 0, 10);
-	TH1D *hPDG = new TH1D("hPDG", "PDG code for trigger strange hadrons", 8000, -4000, 4000); // use Double_t to get around maximum bin content of Int_t
-	// TODO: make the same PDG histogram for the associated hadrons
+	TH1D *hPDG = new TH1D("hPDG", "PDG code for trigger strange hadrons", 8000, -4000, 4000); 
+	TH1D *hPDGAssoc = new TH1D("hPDGAssoc", "PDG code for associated strange hadrons", 8000, -4000, 4000); // use Double_t to get around maximum bin content of Int_t
 	TH1I *hStrangenessPerEvent = new TH1I("hStrangenessPerEvent", "net strangeness per event", 21, -10.5, 10.5);
 
 	// TODO: create tree to save all the data of trigger/assoc pairs to
@@ -105,6 +105,7 @@ int main(int argc, char** argv)
 
 		int nPart = pythia.event.size();
 		int strangenessPerEvent = 0;
+		int triggersPerEvent = 0;
 		
 		for(int iPart = 0; iPart < nPart; iPart++) {
       		const Particle &part = pythia.event[iPart];
@@ -113,15 +114,14 @@ int main(int argc, char** argv)
 			parteta = part.eta();
 			partpdg = part.id();
 			hEtaPt->Fill(parteta,partpT);
+
 			int netStrange = strangenessFromPDG(partpdg); // not yet net strangeness
 			if(netStrange == 0) continue; // strangeness check
-			if(iEvent < 10) cout << iEvent << ": " << partpdg << endl;
 			// check the net strangeness
 			if(partpdg == 310 || partpdg == 130) netStrange = 0; // K0_S/L
 			else if(abs(partpdg) == 321 || abs(partpdg) == 431 || abs(partpdg) == 311) netStrange *= -1; // switch if kaon or D_s, PDG convention
-			else if(netStrange == 2 && getDigitN(partpdg, 3) == 0) {
-				netStrange = 0; // if a meson has 2 strange quarks, it is an ssbar state thus net zero strangeness
-			}
+			else if(netStrange == 2 && getDigitN(partpdg, 3) == 0) continue; // if a meson has 2 strange quarks, it is an ssbar state thus net zero strangeness
+
 			int signpdg = 1;
 			if(partpdg < 0) signpdg = -1;
 			strangenessPerEvent += netStrange * signpdg;
@@ -129,17 +129,19 @@ int main(int argc, char** argv)
 			if(partpT < pTminTrigg) continue; // kine cuts
 			// we have identified a strange trigger that satisfies the kinematic requirements
 			// If we get this far with the trigger particle, we will correlate it with other strange hadrons
-			// In order to be able to normalize, we need to keep track of how many triggers we have for each hadron, because in the next part we will fill the trigger particle info for each pair, which could be more than one.
+			// In order to be able to normalize, we need to keep track of how many triggers we have for each hadron
 			hPDG->Fill((Double_t) partpdg);
+			triggersPerEvent++;
 
 			// Clear the vectors with the associated/correlation variables
 			pdgAssoc.clear(); pTAssoc.clear(); etaAssoc.clear(); deltaPhi.clear(); deltaEta.clear();
 			for(int jPart = 0; jPart < nPart; jPart++) {
+				if(jPart == iPart) continue; // don't correlate particle with itself
 				const Particle &part2 = pythia.event[jPart];
 				Double_t part2pT = part2.pT();
 				Double_t part2eta = part2.eta();
 				Int_t part2pdg = part2.id();
-				if(IsStrange(part2pdg) && part2.isFinal() && partpT > part2pT && part2pT > pTminAssoc){
+				if(IsStrange(part2pdg) && part2.isFinal() && part2pT > pTminAssoc){
 					Double_t dPhi = std::fmod(part.phi() - part2.phi() + 2.5*PI, 2*PI) - 0.5*PI; 
 					Double_t dEta = parteta - part2eta;
 					pdgAssoc.push_back(part2pdg);
@@ -147,6 +149,7 @@ int main(int argc, char** argv)
 					etaAssoc.push_back(part2eta);
 					deltaPhi.push_back(dPhi);
 					deltaEta.push_back(dEta);
+					if(triggersPerEvent == 1) hPDGAssoc->Fill(part2pdg);
 				}
 			} // end assoc loop
 			tree->Fill();
