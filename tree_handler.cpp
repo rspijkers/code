@@ -67,6 +67,7 @@ void tree_handler() {
         Double_t chargedKaonSig = 0;
     };
 
+    // QA & Kinematic plots
     TH1D* hInclusiveTrigger = new TH1D("hInclusiveTrigger", "Inclusive transverse momentum spectrum for trigger hadrons", 100, 0, 25);
     TH1D* hInclusiveAssoc = new TH1D("hInclusiveAssoc", "Inclusive transverse momentum spectrum for associated hadrons", 100, 0, 10);
     TH1D* hEtaTrigger = new TH1D("hEtaTrigger", "Pseudorapidity spectrum for trigger hadrons", 100, -10, 10);
@@ -76,13 +77,12 @@ void tree_handler() {
     TH1D* hEtaNormal = new TH1D("hEtaNormal", "Pseudorapidity spectrum for 'normal' baryons", 100, -10, 10);
     TH1D* hEtaAnti = new TH1D("hEtaAnti", "Pseudorapidity spectrum for anti baryons", 100, -10, 10);
 
-    // DeltaPhi for lambda's, to check the difference between pp and ppbar
+    // DeltaPhi plots
     TH1D* hLLdphi = new TH1D("hLLdphi", "deltaphi for L-L", 50, -0.5*PI, 1.5*PI);
     TH1D* hLLbardphi = new TH1D("hLLbardphi", "deltaphi for L-Lbar", 50, -0.5*PI, 1.5*PI);
     TH1D* hLbarLdphi = new TH1D("hLbarLdphi", "deltaphi for Lbar-L", 50, -0.5*PI, 1.5*PI);
     TH1D* hLbarLbardphi = new TH1D("hLbarLbardphi", "deltaphi for Lbar-Lbar", 50, -0.5*PI, 1.5*PI);
 
-    // TODO: implement the same dphi histo's for the following pairs: L-K, L-S^min, K-K
     TH1D* hLKdphi = new TH1D("hLKdphi", "deltaphi for L-Kmin", 50, -0.5*PI, 1.5*PI);
     TH1D* hLKbardphi = new TH1D("hLKbardphi", "deltaphi for L-Kplus", 50, -0.5*PI, 1.5*PI);
     TH1D* hLbarKdphi = new TH1D("hLbarKdphi", "deltaphi for Lbar-Kmin", 50, -0.5*PI, 1.5*PI);
@@ -102,10 +102,11 @@ void tree_handler() {
     TH1D* hTemp = new TH1D("template", "template", nbins, 0, nbins); 
     // hTemp->SetOption("HIST E");
     TAxis* ax = hTemp->GetXaxis();
-    ax->SetBinLabel(1, "K0_S/L");
+    // TODO: use LaTeX for bin labels? and should we do the normal, or antiname? or smt else?
+    ax->SetBinLabel(1, "K^{0}_{S/L}");
     for (Int_t i = 0; i < nbins - 1; i++){
         // 0th bin is underflow, 1st bin is K0_S/L, so start with i + 2
-        ax->SetBinLabel(i + 2, hadron_vec[i].getAntiName());
+        ax->SetBinLabel(i + 2, hadron_vec[i].getAntiLatex());
     } 
     std::unordered_map<Int_t, mapStruct> map; 
     for (Hadron hadron : hadron_vec) {
@@ -217,7 +218,7 @@ void tree_handler() {
             if(pdg == Kzerolong.getPDG() || pdg == Kzeroshort.getPDG()){
                 // we use the number of pairs with K0_S/L to estimate the error therefor we fill the bkg histo
                 // the signal of K0_S/L is calculated by using conservation of strangeness, we don't need to do fill any signal histo here
-                hBkg->Fill("K0_S/L", 0.5); // K0_S/L counts as half strange
+                hBkg->Fill("K^{0}_{S/L}", 0.5); // K0_S/L counts as half strange
                 continue; // don't do anything else
             }
 
@@ -266,14 +267,8 @@ void tree_handler() {
     for (Hadron hadron : hadron_vec){
         Int_t pdg = hadron.getPDG();
         Int_t antipdg = hadron.getAntiPDG();
-        mapStruct normal, anti;
-        try{
-            normal = map.at(pdg);
-            anti = map.at(antipdg);
-        } catch (std::out_of_range){
-            std::cout << "caught mapstruct at postprocessing!" << std::endl;
-            continue;
-        }
+        mapStruct normal = map.at(pdg);
+        mapStruct anti = map.at(antipdg);
         TH1D* hNormalSig = normal.hSig;
         TH1D* hNormalBkg = normal.hBkg;
         TH1D* hAntiSig = anti.hSig;
