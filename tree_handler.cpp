@@ -15,7 +15,7 @@
 void tree_handler() {
     TH1::SetDefaultSumw2(); // make sure errors are propagated in histo's
     
-    TFile* inputfile = new TFile("500ktest.root", "READ");
+    TFile* inputfile = new TFile("output/ssbar_monash_5M_14TeV.root", "READ");
     TTree* tree = (TTree*) inputfile->Get("tree");
     // tree->Print();
     // tree->Show(0);
@@ -32,6 +32,7 @@ void tree_handler() {
     // Kinematic cuts
     const Double_t maxEtaTrigger = 2.0;
     const Double_t maxEtaAssoc = 3.0;
+    const Bool_t BkgScaling =  true; // do bkg scaling, needed to account for asymmetry in pp collisions
     // std::cout << "We are using eta cuts: maxEtaTrigger = " << maxEtaTrigger << " and maxEtaAssoc = " << maxEtaAssoc << std::endl;
     std::set<Int_t> uniqueTriggerPDGs, uniqueAssocPDGs; // to keep track of possible PDG
 
@@ -104,9 +105,9 @@ void tree_handler() {
     TAxis* ax = hTemp->GetXaxis();
     // TODO: use LaTeX for bin labels? and should we do the normal, or antiname? or smt else?
     ax->SetBinLabel(1, "K^{0}_{S/L}");
-    for (Int_t i = 0; i < nbins - 1; i++){
+    for (Int_t i = 1; i < nbins; i++){
         // 0th bin is underflow, 1st bin is K0_S/L, so start with i + 2
-        ax->SetBinLabel(i + 2, hadron_vec[i].getAntiLatex());
+        ax->SetBinLabel(i + 1, hadron_vec[i-1].getAntiLatex());
     } 
     std::unordered_map<Int_t, mapStruct> map; 
     for (Hadron hadron : hadron_vec) {
@@ -225,11 +226,11 @@ void tree_handler() {
             Int_t aStrangeness = map.at(pdg).strangeness;
             // check if pair is ss or os and fill relevant histo
             if((tStrangeness > 0) != (aStrangeness > 0)){ // opposite sign
-                hSig->Fill(assoc.getAntiName(), abs(aStrangeness));
+                hSig->Fill(assoc.getAntiLatex(), abs(aStrangeness));
                 // if K +/-, keep track so we can postprocess K0_S/L bkg
                 if (abs(pdg) == Kminus.getAntiPDG()) map.at(pdgTrigger).chargedKaonSig++;
             } else if ((tStrangeness > 0) == (aStrangeness > 0)){ // same sign
-                hBkg->Fill(assoc.getAntiName(), abs(aStrangeness));
+                hBkg->Fill(assoc.getAntiLatex(), abs(aStrangeness));
                 // if K +/-, keep track so we can postprocess K0_S/L bkg
                 if (abs(pdg) == Kminus.getAntiPDG()) map.at(pdgTrigger).chargedKaonBkg++;
             } else {
@@ -263,6 +264,34 @@ void tree_handler() {
         }
     }
 
+    // make the bkg scaling histogram so we can scale by multiplying/dividing by a histogram
+    TH1D* hPDGAssoc = (TH1D*) inputfile->Get("hPDGAssoc");
+    TH1D* hBkgScaling = (TH1D*) hTemp->Clone();
+    hBkgScaling->SetTitle("BkgScaling title");
+    hBkgScaling->SetName("BkgScaling name");
+    TAxis* PDGAxis = hPDGAssoc->GetXaxis();
+    for(Hadron hadron : hadron_vec){
+        Double_t Nanti = hPDGAssoc->GetBinContent(PDGAxis->FindBin(hadron.getAntiPDG()));
+        Double_t Nnorm =  hPDGAssoc->GetBinContent(PDGAxis->FindBin(hadron.getPDG()));
+        Double_t scale, error;
+        if(Nanti == 0 || Nnorm == 0){ // if there are no normal and/or anti assocs, define scale to be 1. (i.e. no scaling)
+            scale = 1;
+            error = 0;
+        } else {
+            scale = Nanti/Nnorm;
+            // calculate error as follows (see wiki of propagation of uncertainty)
+            error = scale*sqrt(1/Nnorm + 1/Nanti);
+            // it makes no sense to define a scaling with a large error, this will only make it more complicated
+            if(error > 0.01){ // cut at 0.01 practically means that we implement the scaling only for Kaons, Lambda's, Sigma's, and Xi's, note that this may differ between productions
+                scale = 1;
+                error = 0;
+            }
+        }
+        Int_t binnr = hBkgScaling->Fill(hadron.getAntiLatex(), scale); // Filling this way returns the bin number which has been filled
+        hBkgScaling->SetBinError(binnr, error);
+    }
+
+
     // Bkg, normalization, and errors
     for (Hadron hadron : hadron_vec){
         Int_t pdg = hadron.getPDG();
@@ -277,24 +306,25 @@ void tree_handler() {
         Double_t NNormalTriggers = normal.ntriggers;
         Double_t NAntiTriggers = anti.ntriggers;
 
-        // so now that we use strangeness conservation to determine the K0_S/L bins, how would we do this if we scale the background to account for L/Lbar asymmetry?
-        // first scaling then using conservation, or vice versa?
-        // Also, how do we propagate the uncertainties that come from estimating the scaling factor?
+        // Do bkg scaling first, then use strangeness conservation to calculate K0_S/L. This worsens the error in K0, but is more realistic
+        if(BkgScaling){ // allow for switching the scaling on/off
+            hNormalBkg->Multiply(hBkgScaling);
+            hAntiBkg->Divide(hBkgScaling); 
+        }
 
         hNormalSig->Add(hNormalBkg, -1.);
         hAntiSig->Add(hAntiBkg, -1.);
 
-        // so, instead of this funky K0_S/L handling, we can try to use a missing energy technique: assigning all strangeness we miss to the K0_S/L
-        // compare integral of hSig (after bkg subtraction) to ntriggers, and assign the difference to the K0_S/L bin. 
-        // as for the statistical error, we can use the number of K0_S/L pairs we find maybe?
-        int NormalMissingStrange = NNormalTriggers*normal.strangeness - hNormalSig->Integral(2, nbins); // skip the K0_S/L bin in integration
-        int AntiMissingStrange = -NAntiTriggers*anti.strangeness - hAntiSig->Integral(2, nbins); // skip the K0_S/L bin in integration
-        hNormalSig->SetBinContent(1, NormalMissingStrange); 
-        Double_t K0Error = sqrt(NormalMissingStrange + 2*hNormalBkg->GetBinContent(1)); // calculate errors as sqrt(signal + 2*bkg)
-        hNormalSig->SetBinError(1, K0Error); 
-        hAntiSig->SetBinContent(1, AntiMissingStrange); 
-        K0Error = sqrt(NormalMissingStrange + 2*hNormalBkg->GetBinContent(1)); // calculate errors as sqrt(signal + 2*bkg)
-        hAntiSig->SetBinError(1, K0Error); 
+        // We can try to use a missing energy technique: assigning all strangeness we miss to the K0_S/L
+        // compare integral of hSig (after bkg subtraction) to ntriggers (total strangeness), and assign the difference to the K0_S/L bin. 
+        // The statistical errors are automatically calculated through IntegralAndError(), only need to manually catch and fill them
+        Double_t NormK0, NormError, AntiK0, AntiError;
+        NormK0 = hNormalSig->IntegralAndError(2, nbins, NormError);
+        AntiK0 = hAntiSig->IntegralAndError(2, nbins, AntiError);
+        hNormalSig->SetBinContent(1, NNormalTriggers*normal.strangeness - NormK0); 
+        hNormalSig->SetBinError(1, NormError); 
+        hAntiSig->SetBinContent(1, -NAntiTriggers*anti.strangeness - AntiK0); 
+        hAntiSig->SetBinError(1, AntiError); 
 
         if(hNormalSig->GetBinContent(0) > 0 || hAntiSig->GetBinContent(0) > 0) {
             std::cout << "Warning: non-zero underflow bin detected in trigger" << hadron.getName() << std::endl;

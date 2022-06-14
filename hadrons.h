@@ -85,7 +85,7 @@ Hadron Xibmin = Hadron("Xib-", "Xib+", 5132, "#Xi_{b}^{-}", "#Xi_{b}^{+}", 5797.
 Hadron Omegac = Hadron("Omegac0", "Omegac0bar", 4332, "#Omega_{c}^{0}", "#bar{#Omega_{c}^{0}}", 2695.2);
 Hadron Omegacc = Hadron("Omegacc+", "Omegacc-", 4432, "#Omega_{cc}^{+}", "#Omega_{cc}^{-}", 3786.63); // pythia mass
 
-Hadron Omegabc = Hadron("Omegabc0", "Omegabc0bar", 5342, "#Omega_{bc}^{0}", "#bar{#Omega_{bc}^{0}", 7190.99); // pythia mass
+Hadron Omegabc = Hadron("Omegabc0", "Omegabc0bar", 5342, "#Omega_{bc}^{0}", "#bar{#Omega_{bc}^{0}}", 7190.99); // pythia mass
 
 Hadron Omegab = Hadron("Omegab-", "Omegab+", 5332, "#Omega_{b}^{-}", "#Omega_{b}^{+}", 6046.1);
 Hadron Omegabb = Hadron("Omegabb-", "Omegabb+", 5532, "#Omega_{bb}^{-}", "#Omega_{bb}^{+}", 10602.09); // pythia mass
