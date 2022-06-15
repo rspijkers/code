@@ -5,6 +5,7 @@
 #include <cmath> // sinh, cosh, tanh
 #include "TFile.h"
 #include "TTree.h"
+#include "TString.h"
 
 double rapidityFromEta(double eta, double pt, double m){
     /*Converts pseudorapidity to rapidity.*/
@@ -39,11 +40,17 @@ int getDigitN(const int target, int n){
 }
 
 // A class that adds a name to a TFile other than the filepath.
+// Note that TFile has a title option built in, but this does not work for some reason
 class NamedFile : public TFile {
     private:
         TString customName;
     
     public:
+        // This constructor passes filename and option to the TFile constructor, while explicitly setting customName
+        NamedFile(const char* filename, const char* _customName, Option_t* option = "") : TFile(filename, option) {
+            customName = _customName;
+        }
+
         template <class T>
         void SetCustomName(T _name) {customName = _name;}
         TString GetCustomName() {return customName;}
