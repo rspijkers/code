@@ -9,6 +9,7 @@
 #include "TLegend.h"
 #include "TStyle.h"
 #include "THStack.h"
+#include "TKey.h"
 #include <vector>
 #include <unordered_map>
 using std::cout;
@@ -24,40 +25,28 @@ void compare() {
     gROOT->ForceStyle(); // force custom style on objects created with a different style
 
     std::vector<NamedFile*> infiles;
-
-    // TString inputdir = "output/ssbar_results_split_by_particle-antiparticle";
-    // TFile *monash = new TFile(inputdir + "/plots_monash.root", "READ");
-    // infiles.push_back(monash);
-    // TFile *skands_mode2 = new TFile(inputdir + "/plots_skands_mode2.root", "READ");
-    // infiles.push_back(skands_mode2);
-    // TFile *ropes = new TFile(inputdir + "/plots_ropes.root", "READ");
-    // infiles.push_back(ropes);
-    // TFile *monashppbar = new TFile(inputdir + "/plots_monash_ppbar.root", "READ");
-    // infiles.push_back(monashppbar);
-
-    NamedFile *monash = (NamedFile*) new TFile("output/plots_monash_test.root", "READ");
-    monash->SetCustomName("Monash");
-    infiles.push_back(monash);
-    NamedFile *monashppbar = (NamedFile*) new TFile("output/plots_monash_ppbar_test.root", "READ");
-    monashppbar->SetCustomName("Monash p#bar{p}");
-    infiles.push_back(monashppbar);
+    NamedFile *pp_scaling = new NamedFile("output/scalingtest/pp_scaling.root", "pp_scaling", "READ");
+    infiles.push_back(pp_scaling);
+    NamedFile *ppbar_scaling = new NamedFile("output/scalingtest/ppbar_scaling.root", "ppbar_scaling", "READ");
+    infiles.push_back(ppbar_scaling);
+    NamedFile *pp_noscaling = new NamedFile("output/scalingtest/pp_noscaling.root", "pp_noscaling", "READ");
+    infiles.push_back(pp_noscaling);
+    NamedFile *ppbar_noscaling = new NamedFile("output/scalingtest/ppbar_noscaling.root", "ppbar_noscaling", "READ");
+    infiles.push_back(ppbar_noscaling);
 
     TFile *outfile = new TFile("output/output_compare.root", "RECREATE");
     
-    Int_t nfiles = infiles.size();
-
-    TList *list = infiles[0]->GetListOfKeys();
-    for(auto *key : *list){
+    for(auto *key : *infiles[0]->GetListOfKeys()){
         cout << key->GetName() << endl;
         TString name = (TString) key->GetName();
-        TString ctitle = TString("title of ") + name;
-        TCanvas *c = new TCanvas(name, ctitle, 800, 800);
+        TString ctitle = TString("title of "+ name);
+        TCanvas *c = new TCanvas(name, ctitle, 1);
         TLegend *legend = new TLegend(0.7, 0.8, 0.9, 0.9, "PYTHIA Tunes");
         TString plottitle = key->GetTitle();
         int i = 0;
         THStack *hStack = new THStack(name, plottitle);
         for(NamedFile *file : infiles){
-            TH1D *h = (TH1D*) file->Get(name);
+            TH1D *h = file->Get<TH1D>(name); // TODO: implement safeguard against trying to get something that doesnt exist
             h->SetLineColor(colors[i]);
             h->SetOption("HIST"); // plot histogram style
             hStack->Add(h);
@@ -79,11 +68,11 @@ void compare() {
         TString bkgname = TString("h"+trigger+assoc+"dphi");
         TString bkgbarname = TString("h"+trigger+"bar"+assoc+"bardphi");
         // okay you can open your eyes again
-        for(auto production : {monash, monashppbar}){
+        for(auto production : infiles){
             TString prodname = production->GetCustomName();
             // nevermind the string fuckery continues
-            TCanvas *c = new TCanvas("c", corr[0]+" - "+corr[1]+" correlations in "+prodname, 800, 800);
-            TCanvas *cbar = new TCanvas("cbar", corr[0]+"bar - "+corr[1]+" correlations in "+prodname, 800, 800);
+            TCanvas *c = new TCanvas(corr[0]+corr[1]+"_"+prodname, corr[0]+" - "+corr[1]+" correlations in "+prodname, 800, 800);
+            TCanvas *cbar = new TCanvas(corr[0]+"bar"+corr[1]+"_"+prodname, corr[0]+"bar - "+corr[1]+" correlations in "+prodname, 800, 800);
             THStack *stack = new THStack("stack", corr[0]+" - "+corr[1]+" correlations in "+prodname);
             THStack *stackbar = new THStack("stackbar", corr[0]+"bar - "+corr[1]+" correlations in "+prodname);
             TH1D* hbkg = (TH1D*) production->Get(bkgname); hbkg->SetLineColor(kBlack);
