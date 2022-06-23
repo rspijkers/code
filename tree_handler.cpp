@@ -15,7 +15,7 @@
 void tree_handler() {
     TH1::SetDefaultSumw2(); // make sure errors are propagated in histo's
     
-    TFile* inputfile = new TFile("output/ssbar_monash_5M_14TeV.root", "READ");
+    TFile* inputfile = new TFile("output/ssbar_monash_ppbar_5M_14TeV.root", "READ");
     TTree* tree = (TTree*) inputfile->Get("tree");
     // tree->Print();
     // tree->Show(0);
@@ -27,7 +27,7 @@ void tree_handler() {
         std::cout << "WARNING: non-empty underflow and/or overflow bins in the PDG histogram!!! This means we are not accounting for all particle species. Please investigate" << std::endl;
     }
 
-    TFile* outputfile = new TFile("test_handler.root", "RECREATE");
+    TFile* outputfile = new TFile("test_ppbar.root", "RECREATE");
 
     // Kinematic cuts
     const Double_t maxEtaTrigger = 2.0;
@@ -64,8 +64,6 @@ void tree_handler() {
         Int_t strangeness;
 
         Int_t ntriggers = 0;
-        Double_t chargedKaonBkg = 0;
-        Double_t chargedKaonSig = 0;
     };
 
     // QA & Kinematic plots
@@ -101,13 +99,16 @@ void tree_handler() {
 
 
     TH1D* hTemp = new TH1D("template", "template", nbins, 0, nbins); 
+    TH1D* hTempBar = new TH1D("templatebar", "templatebar", nbins, 0, nbins); 
     // hTemp->SetOption("HIST E");
     TAxis* ax = hTemp->GetXaxis();
-    // TODO: use LaTeX for bin labels? and should we do the normal, or antiname? or smt else?
     ax->SetBinLabel(1, "K^{0}_{S/L}");
+    TAxis* ax1 = hTempBar->GetXaxis();
+    ax1->SetBinLabel(1, "K^{0}_{S/L}");
     for (Int_t i = 1; i < nbins; i++){
         // 0th bin is underflow, 1st bin is K0_S/L, so start with i + 2
-        ax->SetBinLabel(i + 1, hadron_vec[i-1].getAntiLatex());
+        ax->SetBinLabel(i + 1, hadron_vec[i-1].getLatex());
+        ax1->SetBinLabel(i + 1, hadron_vec[i-1].getAntiLatex());
     } 
     std::unordered_map<Int_t, mapStruct> map; 
     for (Hadron hadron : hadron_vec) {
@@ -117,13 +118,13 @@ void tree_handler() {
         TH1D* hss = (TH1D*) hTemp->Clone();
         hss->SetName(name + "_bkg");
         hss->SetTitle("strange strange pairs");
-        TH1D* hssbar = (TH1D*) hTemp->Clone();
+        TH1D* hssbar = (TH1D*) hTempBar->Clone();
         hssbar->SetName(name + "_sig");
         hssbar->SetTitle("strange anti-strange pairs");
         TH1D* hsbars = (TH1D*) hTemp->Clone();
         hsbars->SetName(antiname + "_sig");
         hsbars->SetTitle("anti-strange strange pairs");
-        TH1D* hsbarsbar = (TH1D*) hTemp->Clone();
+        TH1D* hsbarsbar = (TH1D*) hTempBar->Clone();
         hsbarsbar->SetName(antiname + "_bkg");
         hsbarsbar->SetTitle("anti-strange anti-strange pairs");
         
@@ -226,13 +227,17 @@ void tree_handler() {
             Int_t aStrangeness = map.at(pdg).strangeness;
             // check if pair is ss or os and fill relevant histo
             if((tStrangeness > 0) != (aStrangeness > 0)){ // opposite sign
-                hSig->Fill(assoc.getAntiLatex(), abs(aStrangeness));
-                // if K +/-, keep track so we can postprocess K0_S/L bkg
-                if (abs(pdg) == Kminus.getAntiPDG()) map.at(pdgTrigger).chargedKaonSig++;
+                if(aStrangeness > 0){
+                    hSig->Fill(assoc.getLatex(), abs(aStrangeness));
+                } else {
+                    hSig->Fill(assoc.getAntiLatex(), abs(aStrangeness));
+                }
             } else if ((tStrangeness > 0) == (aStrangeness > 0)){ // same sign
-                hBkg->Fill(assoc.getAntiLatex(), abs(aStrangeness));
-                // if K +/-, keep track so we can postprocess K0_S/L bkg
-                if (abs(pdg) == Kminus.getAntiPDG()) map.at(pdgTrigger).chargedKaonBkg++;
+                if(aStrangeness > 0){
+                    hBkg->Fill(assoc.getLatex(), abs(aStrangeness));
+                } else {
+                    hBkg->Fill(assoc.getAntiLatex(), abs(aStrangeness));
+                }
             } else {
                 std::cout << "wtf did you do???" << std::endl;
             }
@@ -267,8 +272,8 @@ void tree_handler() {
     // make the bkg scaling histogram so we can scale by multiplying/dividing by a histogram
     TH1D* hPDGAssoc = (TH1D*) inputfile->Get("hPDGAssoc");
     TH1D* hBkgScaling = (TH1D*) hTemp->Clone();
+    hBkgScaling->SetName("hBkgScaling");
     hBkgScaling->SetTitle("BkgScaling title");
-    hBkgScaling->SetName("BkgScaling name");
     TAxis* PDGAxis = hPDGAssoc->GetXaxis();
     for(Hadron hadron : hadron_vec){
         Double_t Nanti = hPDGAssoc->GetBinContent(PDGAxis->FindBin(hadron.getAntiPDG()));
@@ -287,7 +292,7 @@ void tree_handler() {
                 error = 0;
             }
         }
-        Int_t binnr = hBkgScaling->Fill(hadron.getAntiLatex(), scale); // Filling this way returns the bin number which has been filled
+        Int_t binnr = hBkgScaling->Fill(hadron.getLatex(), scale); // Filling this way returns the bin number which has been filled
         hBkgScaling->SetBinError(binnr, error);
     }
 
