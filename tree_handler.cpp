@@ -3,6 +3,8 @@
 #include "TH1D.h"
 #include "TString.h"
 #include "TTree.h"
+#include "TChain.h"
+#include "TChainElement.h"
 #include "TPad.h"
 #include <vector>
 #include <set>
@@ -15,19 +17,51 @@
 void tree_handler() {
     TH1::SetDefaultSumw2(); // make sure errors are propagated in histo's
     
-    TFile* inputfile = new TFile("output/ssbar_monash_ppbar_5M_14TeV.root", "READ");
-    TTree* tree = (TTree*) inputfile->Get("tree");
-    // tree->Print();
-    // tree->Show(0);
+    // stbc input filepath = "/data/alice/rspijker/output/monash_pp_50M_14TeV_Trigger4GeV/"
+
+    TChain* chain = new TChain("tree");
+    chain->Add("output/ssbar_monash*5M_14TeV.root");
+    // Create list of files 
+
+    TObjArray* fileElements = chain->GetListOfFiles(); // not actually a list of files, hence the dynamic_cast fuckery
+    Int_t nfiles = fileElements->GetEntries();
+    TFile* fileList[nfiles];
+    for(Int_t i = 0; i < nfiles; i++) { // create an ACTUAL fileList from fileElements
+        TChainElement* element = dynamic_cast<TChainElement*>((*fileElements)[i]);
+        TFile* file;
+        // check for nullpointers every step of the way
+        if(element) file = new TFile(element->GetTitle());
+        if(file) fileList[i] = file;
+    }
+    if(!fileList[0]){
+        std::cout << "file is nullptr, something went wrong" << std::endl;
+        return;
+    }
+    
+    // handle the QA histo's: 
+    // from the "first" file, get the relevant QA's and clone them so we can add the others
+    TH1D* hPDGTrigger = (TH1D*) fileList[0]->Get<TH1D>("hPDG")->Clone();
+    TH1D* hPDGAssoc = (TH1D*) fileList[0]->Get<TH1D>("hPDGAssoc")->Clone();
+
+    for(Int_t i = 1; i < nfiles; i++){
+        TFile* file = fileList[i];
+        for(TH1D* h : {hPDGTrigger, hPDGAssoc}){
+            TH1D* h_ = file->Get<TH1D>(h->GetName());
+            if(!h_){ // check h_ is not nullpointer
+                std::cout << "file is nullptr, something went wrong" << std::endl;
+                return;
+            } 
+            h->Add(h_);
+        }
+    }
 
     // Check to see if the under/overflow bins in the pdg are empty. If not, smt funky is going on
-    TH1D* hPDGTrigger = (TH1D*) inputfile->Get("hPDG");
     Int_t nPDGbins = hPDGTrigger->GetNbinsX();
     if(hPDGTrigger->GetBinContent(0) > 0 || hPDGTrigger->GetBinContent(nPDGbins + 1) > 0){
         std::cout << "WARNING: non-empty underflow and/or overflow bins in the PDG histogram!!! This means we are not accounting for all particle species. Please investigate" << std::endl;
     }
 
-    TFile* outputfile = new TFile("test_ppbar.root", "RECREATE");
+    TFile* outputfile = new TFile("test.root", "RECREATE");
 
     // Kinematic cuts
     const Double_t maxEtaTrigger = 2.0;
@@ -44,14 +78,14 @@ void tree_handler() {
     std::vector<Double_t>* etaAssoc = 0;
     std::vector<Double_t>* deltaPhi = 0;
     std::vector<Double_t>* deltaEta = 0;
-    tree->SetBranchAddress("pdgTrigger", &pdgTrigger);
-    tree->SetBranchAddress("pdgAssoc", &pdgAssoc);
-    tree->SetBranchAddress("pTTrigger", &pTTrigger);
-    tree->SetBranchAddress("etaTrigger", &etaTrigger);
-    tree->SetBranchAddress("pTAssoc", &pTAssoc);
-    tree->SetBranchAddress("etaAssoc", &etaAssoc);
-    tree->SetBranchAddress("deltaPhi", &deltaPhi);
-    tree->SetBranchAddress("deltaEta", &deltaEta);
+    chain->SetBranchAddress("pdgTrigger", &pdgTrigger);
+    chain->SetBranchAddress("pdgAssoc", &pdgAssoc);
+    chain->SetBranchAddress("pTTrigger", &pTTrigger);
+    chain->SetBranchAddress("etaTrigger", &etaTrigger);
+    chain->SetBranchAddress("pTAssoc", &pTAssoc);
+    chain->SetBranchAddress("etaAssoc", &etaAssoc);
+    chain->SetBranchAddress("deltaPhi", &deltaPhi);
+    chain->SetBranchAddress("deltaEta", &deltaEta);
 
     std::vector<Hadron> hadron_vec = {Kminus, Lambda, Sigmaminus, Sigmazero, Sigmaplus, Ximinus, Xizero, Omegaminus, Dsubs, Bsubs, Xicplus, Xiczero, Xibmin, Xibzero, Omegac, Omegab, Omegacc, Omegabb, Omegabc};
     const Int_t nbins = hadron_vec.size() + 1; // + 1 for K0_S/L
@@ -155,10 +189,10 @@ void tree_handler() {
     map[Kzeroshort.getPDG()] = k0shortstruct;
     map[Kzerolong.getPDG()] = k0longstruct;
 
-    const Long64_t nentries = tree->GetEntries(); 
+    const Long64_t nentries = chain->GetEntries(); 
     Double_t pTDuplicateCheck = -1;
     for(Long64_t i = 0; i < nentries; i++) {
-        tree->GetEntry(i);
+        chain->GetEntry(i);
         // inclusive spectra before kine cuts
         uniqueTriggerPDGs.insert(pdgTrigger); // will only insert if unique
         Hadron trigger;
@@ -270,7 +304,6 @@ void tree_handler() {
     }
 
     // make the bkg scaling histogram so we can scale by multiplying/dividing by a histogram
-    TH1D* hPDGAssoc = (TH1D*) inputfile->Get("hPDGAssoc");
     TH1D* hBkgScaling = (TH1D*) hTemp->Clone();
     hBkgScaling->SetName("hBkgScaling");
     hBkgScaling->SetTitle("BkgScaling title");
@@ -358,7 +391,6 @@ void tree_handler() {
     // for(Int_t pdg : uniqueTriggerPDGs){std:: cout << pdg << std::endl;}
     // for(Int_t pdg : uniqueAssocPDGs){std:: cout << pdg << std::endl;}
     
-    inputfile->Close();
     outputfile->Write();
     outputfile->Close();
 
