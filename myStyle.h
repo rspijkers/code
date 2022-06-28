@@ -12,17 +12,17 @@ TStyle* createStyle(Bool_t setstyle = false){
     myStyle->Reset("Plain");
     myStyle->SetOptTitle(0);
     myStyle->SetOptStat(0);
-    myStyle->SetPalette(1); // TODO: better palette's are available, such as kBird?
+    myStyle->SetPalette(kBird); // Color palette
     myStyle->SetCanvasColor(10);
     myStyle->SetCanvasBorderMode(0);
     myStyle->SetFrameLineWidth(1);
     myStyle->SetFrameFillColor(kWhite);
     myStyle->SetPadColor(10);
-    myStyle->SetPadTickX(1);
-    myStyle->SetPadTickY(1);
+    myStyle->SetPadTickX(1); // Axis ticks on the top
+    myStyle->SetPadTickY(1); // Axis ticks on the right
     myStyle->SetPadBottomMargin(0.15);
     myStyle->SetPadLeftMargin(0.15);
-    myStyle->SetHistLineWidth(1);
+    myStyle->SetHistLineWidth(2); // 1
     myStyle->SetHistLineColor(kRed);
     myStyle->SetFuncWidth(2);
     myStyle->SetFuncColor(kGreen);
@@ -41,6 +41,7 @@ TStyle* createStyle(Bool_t setstyle = false){
     myStyle->SetLegendBorderSize(1);
     myStyle->SetLegendFillColor(kWhite);
     //  myStyle->SetFillColor(kWhite);
+    myStyle->SetLegendTextSize(0.01);
     myStyle->SetLegendFont(42);
 
     if(setstyle) myStyle->cd();
@@ -51,7 +52,7 @@ TStyle* createStyle(Bool_t setstyle = false){
 // put custom styles in a namespace
 namespace customStyle{
     TStyle* myStyle = createStyle();
-    const Int_t fillColors[] = {kGray+1,  kRed-10, kBlue-9, kGreen-8, kMagenta-9, kOrange-9,kCyan-8,kYellow-7}; // for syst bands
-    const Int_t colors[]     = {kBlack, kRed+1 , kBlue+1, kGreen+3, kMagenta+1, kOrange-1,kCyan+2,kYellow+2};
+    const Int_t fillColors[] = {kGray+1,  kRed-10, kBlue-9, kGreen-8, kMagenta-9, kOrange-9, kCyan-8, kYellow-7}; // for syst bands
+    const Int_t colors[]     = {kBlack, kRed+1 , kBlue+1, kGreen+3, kMagenta+1, kOrange-1, kCyan+2, kYellow+2};
     const Int_t markers[]    = {kFullCircle, kFullSquare,kOpenCircle,kOpenSquare,kOpenDiamond,kOpenCross,kFullCross,kFullDiamond,kFullStar,kOpenStar};
 }
