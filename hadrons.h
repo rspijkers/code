@@ -1,4 +1,3 @@
-#pragma once
 #ifndef HADRONS_
 #define HADRONS_
 // container for all info regarding a specific hadron, including it the info on its antiparticle
@@ -55,7 +54,7 @@ class Hadron {
 // declare the hadrons needed for analysis
 Hadron Kzero = Hadron("K0", "K0bar", 311, "K^{0}", "#bar{K^{0}}", 497.611);
 Hadron Kminus = Hadron("K-", "K+", -321, "K^{-}", "K^{+}", 493.677);
-Hadron Lambda = Hadron("Lambda", "Lambdabar", 3122, "#Lambda", "#bar{#Lambda}", 1115.683);
+Hadron Lambda = Hadron("Lambda", "Lambdabar", 3122, "#Lambda^{0}", "#bar{#Lambda^{0}}", 1115.683);
 Hadron Sigmazero = Hadron("Sigma0", "Sigma0bar", 3212, "#Sigma^{0}", "#bar{#Sigma^{0}}", 1192.642);
 Hadron Sigmaminus = Hadron("Sigma-", "Sigma-bar", 3112, "#Sigma^{-}", "#bar{#Sigma^{-}}", 1197.449);
 Hadron Sigmaplus = Hadron("Sigma+", "Sigma+bar", 3222, "#Sigma^{+}", "#bar{#Sigma^{+}}", 1189.37);

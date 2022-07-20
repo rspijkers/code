@@ -58,14 +58,9 @@ int main(int argc, char** argv)
 	pythia.readString("Random:setSeed = on");
 	pythia.readString(seedstr); // 0 means it uses the time to generate a seed
 
-	//ME corrections
-	//use of matrix corrections where available
-	int mecorr=1;
-	if(mecorr==0){
-		pythia.readString("TimeShower:MECorrections=off");
-	}
 	pythia.init();
 
+	// OUTPUT INIT
 	TFile* outFile = new TFile(argv[1], "CREATE"); // doesn't open file if it already exists 
 	if(!outFile->IsOpen()) { // if output file isn't opened, abort program
 		cerr << "Error: File " << argv[1] << " is not opened, perhaps because it already exists. Aborting script.";
@@ -81,6 +76,7 @@ int main(int argc, char** argv)
 	Int_t partpdg;
 	Double_t partpT;
 	Double_t parteta;
+	Bool_t ssbarHardProcess;
 	std::vector<Int_t> pdgAssoc;
 	std::vector<Double_t> pTAssoc;
 	std::vector<Double_t> etaAssoc;
@@ -90,6 +86,7 @@ int main(int argc, char** argv)
 	tree->Branch("pdgTrigger", &partpdg, "pdgTrigger/I");
 	tree->Branch("pTTrigger", &partpT, "pTTrigger/D");
 	tree->Branch("etaTrigger", &parteta, "etaTrigger/D");
+	tree->Branch("ssbarHardProcess", &ssbarHardProcess, "ssbarHardProcess/O");
 	tree->Branch("pdgAssoc", &pdgAssoc);
 	tree->Branch("pTAssoc", &pTAssoc);
 	tree->Branch("etaAssoc", &etaAssoc);
@@ -104,13 +101,17 @@ int main(int argc, char** argv)
 		int nPart = pythia.event.size();
 		int strangenessPerEvent = 0;
 		int triggersPerEvent = 0;
+
+		ssbarHardProcess = false;
 		
 		for(int iPart = 0; iPart < nPart; iPart++) {
       		const Particle &part = pythia.event[iPart];
+			// check for hard ssbar process before final state cut
+			partpdg = part.id();
+			if(part.status()==-23 && IsStrange(partpdg)) ssbarHardProcess = true;
 			if(!part.isFinal()) continue; // final state particle 
 			partpT = part.pT();
 			parteta = part.eta();
-			partpdg = part.id();
 			hEtaPt->Fill(parteta,partpT);
 
 			int netStrange = strangenessFromPDG(partpdg); // not yet net strangeness
@@ -149,7 +150,7 @@ int main(int argc, char** argv)
 					deltaEta.push_back(dEta);
 				}
 			} // end assoc loop
-			// only fill the associated pdg's once per event
+			// only fill the associated pdg's histo once per event
 			if(triggersPerEvent == 1) for(int x : pdgAssoc) hPDGAssoc->Fill(x);
 			// if(iEvent<100) for(int x : pdgAssoc) cout << iEvent << ": " << x << endl;
 			tree->Fill();

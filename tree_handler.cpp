@@ -1,18 +1,20 @@
+// std
 #include <iostream>
+#include <vector>
+#include <set>
+#include <unordered_map>
+// ROOT
 #include "TFile.h"
 #include "TH1D.h"
 #include "TString.h"
 #include "TTree.h"
 #include "TChain.h"
 #include "TChainElement.h"
-#include "TPad.h"
-#include <vector>
-#include <set>
-#include <unordered_map>
+// custom
 #include "hadrons.h"
 #include "helperfunctions.h"
 
-#define PI 3.14159265
+const double PI = 3.14159265358979323846; 
 
 void tree_handler() {
     TH1::SetDefaultSumw2(); // make sure errors are propagated in histo's
@@ -20,13 +22,13 @@ void tree_handler() {
     // stbc input filepath = "/data/alice/rspijker/output/monash_pp_50M_14TeV_Trigger4GeV/"
 
     TChain* chain = new TChain("tree");
-    chain->Add("output/ssbar_monash*5M_14TeV.root");
-    // Create list of files 
+    chain->Add("output/ssbar_monash_ppbar_5M_14TeV.root");
 
-    TObjArray* fileElements = chain->GetListOfFiles(); // not actually a list of files, hence the dynamic_cast fuckery
+    // Create list of files 
+    TObjArray* fileElements = chain->GetListOfFiles(); // not actually a list of files, hence the TChainElement fuckery
     Int_t nfiles = fileElements->GetEntries();
     TFile* fileList[nfiles];
-    for(Int_t i = 0; i < nfiles; i++) { // create an ACTUAL fileList from fileElements
+    for(Int_t i = 0; i < nfiles; i++) { // create an ACTUAL fileList
         TChainElement* element = dynamic_cast<TChainElement*>((*fileElements)[i]);
         TFile* file;
         // check for nullpointers every step of the way
@@ -58,19 +60,19 @@ void tree_handler() {
     // Check to see if the under/overflow bins in the pdg are empty. If not, smt funky is going on
     Int_t nPDGbins = hPDGTrigger->GetNbinsX();
     if(hPDGTrigger->GetBinContent(0) > 0 || hPDGTrigger->GetBinContent(nPDGbins + 1) > 0){
-        std::cout << "WARNING: non-empty underflow and/or overflow bins in the PDG histogram!!! This means we are not accounting for all particle species. Please investigate" << std::endl;
+        std::cout << "WARNING: non-empty underflow and/or overflow bins in the PDG histogram! Please investigate" << std::endl;
     }
 
-    TFile* outputfile = new TFile("test.root", "RECREATE");
+    TFile* outputfile = new TFile("ppbar_scaled.root", "RECREATE");
 
-    // Kinematic cuts
+    // Analysis options
     const Double_t maxEtaTrigger = 2.0;
     const Double_t maxEtaAssoc = 3.0;
     const Bool_t BkgScaling =  true; // do bkg scaling, needed to account for asymmetry in pp collisions
-    // std::cout << "We are using eta cuts: maxEtaTrigger = " << maxEtaTrigger << " and maxEtaAssoc = " << maxEtaAssoc << std::endl;
     std::set<Int_t> uniqueTriggerPDGs, uniqueAssocPDGs; // to keep track of possible PDG
 
     // Set branch address, so we can use the variables when we GetEntry()
+    Bool_t ssbarHardProcess;
     Int_t pdgTrigger;
     std::vector<Int_t>* pdgAssoc = 0;
     Double_t pTTrigger, etaTrigger;
@@ -78,6 +80,7 @@ void tree_handler() {
     std::vector<Double_t>* etaAssoc = 0;
     std::vector<Double_t>* deltaPhi = 0;
     std::vector<Double_t>* deltaEta = 0;
+    chain->SetBranchAddress("ssbarHardProcess", &ssbarHardProcess);
     chain->SetBranchAddress("pdgTrigger", &pdgTrigger);
     chain->SetBranchAddress("pdgAssoc", &pdgAssoc);
     chain->SetBranchAddress("pTTrigger", &pTTrigger);
@@ -96,7 +99,6 @@ void tree_handler() {
         TH1D* hSig; 
         TH1D* hBkg; 
         Int_t strangeness;
-
         Int_t ntriggers = 0;
     };
 
@@ -131,14 +133,15 @@ void tree_handler() {
     TH1D* hKbarKdphi = new TH1D("hKbarKdphi", "deltaphi for Kplus-Kmin", 50, -0.5*PI, 1.5*PI);
     TH1D* hKbarKbardphi = new TH1D("hKbarKbardphi", "deltaphi for Kplus-Kplus", 50, -0.5*PI, 1.5*PI);
 
-
+    // "Ratio" plots
     TH1D* hTemp = new TH1D("template", "template", nbins, 0, nbins); 
     TH1D* hTempBar = new TH1D("templatebar", "templatebar", nbins, 0, nbins); 
-    // hTemp->SetOption("HIST E");
     TAxis* ax = hTemp->GetXaxis();
     ax->SetBinLabel(1, "K^{0}_{S/L}");
+    hTemp->SetXTitle("Associate hadron");
     TAxis* ax1 = hTempBar->GetXaxis();
     ax1->SetBinLabel(1, "K^{0}_{S/L}");
+    hTempBar->SetXTitle("Associate hadron");
     for (Int_t i = 1; i < nbins; i++){
         // 0th bin is underflow, 1st bin is K0_S/L, so start with i + 2
         ax->SetBinLabel(i + 1, hadron_vec[i-1].getLatex());
@@ -149,40 +152,37 @@ void tree_handler() {
         TString name = hadron.getName();
         TString antiname = hadron.getAntiName();
 
-        TH1D* hss = (TH1D*) hTemp->Clone();
+        TH1D* hss = (TH1D*) hTempBar->Clone();
         hss->SetName(name + "_bkg");
-        hss->SetTitle("strange strange pairs");
+        hss->SetTitle(hadron.getLatex() + " trigger strange correlations");
         TH1D* hssbar = (TH1D*) hTempBar->Clone();
         hssbar->SetName(name + "_sig");
-        hssbar->SetTitle("strange anti-strange pairs");
+        hssbar->SetTitle(hadron.getLatex() + " trigger anti-strange correlations");
         TH1D* hsbars = (TH1D*) hTemp->Clone();
         hsbars->SetName(antiname + "_sig");
-        hsbars->SetTitle("anti-strange strange pairs");
-        TH1D* hsbarsbar = (TH1D*) hTempBar->Clone();
+        hsbars->SetTitle(hadron.getAntiLatex() + " trigger strange correlations");
+        TH1D* hsbarsbar = (TH1D*) hTemp->Clone();
         hsbarsbar->SetName(antiname + "_bkg");
-        hsbarsbar->SetTitle("anti-strange anti-strange pairs");
+        hsbarsbar->SetTitle(hadron.getAntiLatex() + " trigger anti-strange correlations");
         
         Int_t pdg = hadron.getPDG();
-        Int_t abspdg = abs(pdg);
         Int_t strange = strangenessFromPDG(pdg);
 
-        // normal pdg
-        mapStruct normal;
+        mapStruct normal; // normal pdg
         normal.hadron = hadron;
         normal.hSig = hssbar;
         normal.hBkg = hss;
         normal.strangeness = strange;
         map[pdg] = normal;
 
-        // anti pdg
-        mapStruct anti;
+        mapStruct anti; // anti pdg
         anti.hadron = hadron;
         anti.hSig = hsbars;
         anti.hBkg = hsbarsbar;
         anti.strangeness = -1*strange;
         map[-1*pdg] = anti;
     }
-    // hTemp->Delete();
+
     mapStruct k0shortstruct, k0longstruct;
     k0shortstruct.hadron = Kzeroshort;
     k0longstruct.hadron = Kzerolong;
@@ -193,7 +193,7 @@ void tree_handler() {
     Double_t pTDuplicateCheck = -1;
     for(Long64_t i = 0; i < nentries; i++) {
         chain->GetEntry(i);
-        // inclusive spectra before kine cuts
+
         uniqueTriggerPDGs.insert(pdgTrigger); // will only insert if unique
         Hadron trigger;
         // try to access element of map. if doesn't exist, skip this entire iteration
@@ -203,6 +203,7 @@ void tree_handler() {
             std::cout << "Unknown trigger hadron! pdg = " << pdgTrigger << ". Skipping this iteration..." << std::endl;
             continue;
         }
+        // inclusive spectra before kine cuts
         hInclusiveTrigger->Fill(pTTrigger);
         hEtaTrigger->Fill(etaTrigger);
         Double_t y = rapidityFromEta(etaTrigger, pTTrigger, trigger.getMass()/1000.); // convert mass to GeV
@@ -268,15 +269,15 @@ void tree_handler() {
                 }
             } else if ((tStrangeness > 0) == (aStrangeness > 0)){ // same sign
                 if(aStrangeness > 0){
-                    hBkg->Fill(assoc.getLatex(), abs(aStrangeness));
-                } else {
                     hBkg->Fill(assoc.getAntiLatex(), abs(aStrangeness));
+                } else {
+                    hBkg->Fill(assoc.getLatex(), abs(aStrangeness));
                 }
             } else {
                 std::cout << "wtf did you do???" << std::endl;
             }
 
-            // make some deltaphi plots for lambda correlations
+            // fill deltaphi plots
             if(pdgTrigger == Lambda.getPDG()){
                 if(pdg == Lambda.getPDG()){hLLdphi->Fill((*deltaPhi)[j]);} // LL
                 else if(pdg == Lambda.getAntiPDG()){hLLbardphi->Fill((*deltaPhi)[j]);} // LLbar
@@ -292,7 +293,6 @@ void tree_handler() {
                 else if(pdg == Sigmaminus.getPDG()){hLbarSdphi->Fill((*deltaPhi)[j]);} // LbarS
                 else if(pdg == Sigmaminus.getAntiPDG()){hLbarSbardphi->Fill((*deltaPhi)[j]);} // LbarSbar
             }
-            // Kaon corr.
             else if(pdgTrigger == Kminus.getPDG()){
                 if(pdg == Kminus.getPDG()){hKKdphi->Fill((*deltaPhi)[j]);} // KminKmin
                 else if(pdg == Kminus.getAntiPDG()){hKKbardphi->Fill((*deltaPhi)[j]);} // KminKplus
@@ -305,30 +305,31 @@ void tree_handler() {
 
     // make the bkg scaling histogram so we can scale by multiplying/dividing by a histogram
     TH1D* hBkgScaling = (TH1D*) hTemp->Clone();
-    hBkgScaling->SetName("hBkgScaling");
-    hBkgScaling->SetTitle("BkgScaling title");
-    TAxis* PDGAxis = hPDGAssoc->GetXaxis();
-    for(Hadron hadron : hadron_vec){
-        Double_t Nanti = hPDGAssoc->GetBinContent(PDGAxis->FindBin(hadron.getAntiPDG()));
-        Double_t Nnorm =  hPDGAssoc->GetBinContent(PDGAxis->FindBin(hadron.getPDG()));
-        Double_t scale, error;
-        if(Nanti == 0 || Nnorm == 0){ // if there are no normal and/or anti assocs, define scale to be 1. (i.e. no scaling)
-            scale = 1;
-            error = 0;
-        } else {
-            scale = Nanti/Nnorm;
-            // calculate error as follows (see wiki of propagation of uncertainty)
-            error = scale*sqrt(1/Nnorm + 1/Nanti);
-            // it makes no sense to define a scaling with a large error, this will only make it more complicated
-            if(error > 0.01){ // cut at 0.01 practically means that we implement the scaling only for Kaons, Lambda's, Sigma's, and Xi's, note that this may differ between productions
+    if(BkgScaling){ // allow for switching the scaling on/off
+        hBkgScaling->SetName("hBkgScaling");
+        hBkgScaling->SetTitle("BkgScaling title");
+        TAxis* PDGAxis = hPDGAssoc->GetXaxis();
+        for(Hadron hadron : hadron_vec){
+            Double_t Nanti = hPDGAssoc->GetBinContent(PDGAxis->FindBin(hadron.getAntiPDG()));
+            Double_t Nnorm =  hPDGAssoc->GetBinContent(PDGAxis->FindBin(hadron.getPDG()));
+            Double_t scale, error;
+            if(Nanti == 0 || Nnorm == 0){ // if there are no normal and/or anti assocs, define scale to be 1. (i.e. no scaling)
                 scale = 1;
                 error = 0;
+            } else {
+                scale = Nanti/Nnorm;
+                // calculate error as follows (see wiki of propagation of uncertainty)
+                error = scale*sqrt(1/Nnorm + 1/Nanti);
+                // it makes no sense to define a scaling with a large error, this will only make it more complicated
+                if(error > 0.01){ // cut at 0.01 practically means that we implement the scaling only for Kaons, Lambda's, Sigma's, and Xi's, note that this may differ between productions
+                    scale = 1;
+                    error = 0;
+                }
             }
+            Int_t binnr = hBkgScaling->Fill(hadron.getLatex(), scale); // Filling this way returns the bin number which has been filled
+            hBkgScaling->SetBinError(binnr, error);
         }
-        Int_t binnr = hBkgScaling->Fill(hadron.getLatex(), scale); // Filling this way returns the bin number which has been filled
-        hBkgScaling->SetBinError(binnr, error);
     }
-
 
     // Bkg, normalization, and errors
     for (Hadron hadron : hadron_vec){
@@ -367,7 +368,6 @@ void tree_handler() {
         if(hNormalSig->GetBinContent(0) > 0 || hAntiSig->GetBinContent(0) > 0) {
             std::cout << "Warning: non-zero underflow bin detected in trigger" << hadron.getName() << std::endl;
         }
-
         if(hNormalSig->GetBinContent(nbins + 1) > 0 || hAntiSig->GetBinContent(nbins + 1) > 0) {
             std::cout << "Warning: non-zero overflow bin detected in trigger" << hadron.getName() << std::endl;
         }
@@ -385,14 +385,11 @@ void tree_handler() {
         }
     }
 
-    // list all the possible pdgs for both trigger and assoc:
     std::cout << "number of unique strange trigger hadrons found, should be at most " << 2*nbins << ": " << uniqueTriggerPDGs.size() << std::endl;
     std::cout << "number of unique strange assoc hadrons found, should be at most " << 2*nbins << ": " << uniqueAssocPDGs.size() << std::endl;
-    // for(Int_t pdg : uniqueTriggerPDGs){std:: cout << pdg << std::endl;}
-    // for(Int_t pdg : uniqueAssocPDGs){std:: cout << pdg << std::endl;}
-    
+
+    // cleanup
+    hTemp->Delete(); hTempBar->Delete();
     outputfile->Write();
     outputfile->Close();
-
-    return;
 }

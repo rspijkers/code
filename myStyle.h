@@ -1,4 +1,8 @@
+#ifndef MYSTYLE_
+#define MYSTYLE_
+
 #include "TStyle.h"
+
 /* 
 This header file creates a custom style named "myStyle". This style is not by default selected.
 Use `gROOT->SetStyle("myStyle");` or `myStyle->cd();` to set the current style.
@@ -23,7 +27,7 @@ TStyle* createStyle(Bool_t setstyle = false){
     myStyle->SetPadBottomMargin(0.15);
     myStyle->SetPadLeftMargin(0.15);
     myStyle->SetHistLineWidth(2); // 1
-    myStyle->SetHistLineColor(kRed);
+    // myStyle->SetHistLineColor(kRed);
     myStyle->SetFuncWidth(2);
     myStyle->SetFuncColor(kGreen);
     myStyle->SetLineWidth(1);
@@ -54,5 +58,7 @@ namespace customStyle{
     TStyle* myStyle = createStyle();
     const Int_t fillColors[] = {kGray+1,  kRed-10, kBlue-9, kGreen-8, kMagenta-9, kOrange-9, kCyan-8, kYellow-7}; // for syst bands
     const Int_t colors[]     = {kBlack, kRed+1 , kBlue+1, kGreen+3, kMagenta+1, kOrange-1, kCyan+2, kYellow+2};
-    const Int_t markers[]    = {kFullCircle, kFullSquare,kOpenCircle,kOpenSquare,kOpenDiamond,kOpenCross,kFullCross,kFullDiamond,kFullStar,kOpenStar};
+    const Int_t markers[]    = {kFullCircle, kFullSquare, kOpenCircle, kOpenSquare, kOpenDiamond, kOpenCross, kFullCross, kFullDiamond, kFullStar, kOpenStar};
 }
+
+#endif

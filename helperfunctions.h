@@ -1,13 +1,16 @@
 #ifndef HELPERFUNCTIONS_
 #define HELPERFUNCTIONS_
 
+// std
 #include <iostream> // cout and stuff
 #include <cmath> // sinh, cosh, tanh, abs
+// ROOT
 #include "TFile.h"
 #include "TTree.h"
 #include "TString.h"
 #include "TH1.h"
 #include "TCanvas.h"
+// custom
 #include "myStyle.h" // check to see if it can find the file first? otherwise the entire header is useless
 
 double rapidityFromEta(double eta, double pt, double m){
@@ -59,45 +62,31 @@ class NamedFile : public TFile {
         TString GetCustomName() {return customName;}
 };
 
-// Make a function that creates a default canvas complete with axes, labels, everything
-// This canvas can then be used in plots with multiple histo's, simply by doing h->Draw("same")
-template <class T> // can be TH1D, TH1F, TH1I, etc.
-TCanvas* createMultiTH1(std::vector<T*> TH1vector, Bool_t useMyStyle=true){
-    if(useMyStyle){
-        customStyle::myStyle->cd(); // set custom style
-        gROOT->ForceStyle(); // force custom style on objects created with a different style
-    }
-    Double_t xmin, xmax, ymin, ymax;
-    // Does this also take error bars into account?
-    int i = 0;
-    for(T* h : TH1vector){ // iteration 0 over all histo's, to determine x and y min and max
-        Double_t _xmin, _xmax, _ymin, _ymax;
-        h->GetMinimumAndMaximum(_ymin, _ymax);
-        _xmin = h->GetXaxis()->GetXmin();
-        _xmax = h->GetXaxis()->GetXmax();
-        if(i == 0){ // first iteration always set the values
-            xmin = _xmin;
-            xmax = _xmax;
-            ymin = _ymin;
-            ymax = _ymax;
-        } else { // not the first iteration, check per value
-            if(_xmin < xmin) xmin = _xmin;
-            if(_xmax > xmax) xmax = _xmax;
-            if(_ymin < ymin) ymin = _ymin;
-            if(_ymax > ymax) ymax = _ymax;
-        }
-        i++;
-    }
-    ymax = 1.1*ymax + std::sqrt(ymax); // y margin statistical error
-    if(ymin != 0) ymin -= std::sqrt(std::abs(ymin)); // statistical error
-    TCanvas* canvas = new TCanvas("multiplotname", "multiplottitle", 800, 600);
-    canvas->cd();
-    TH1* frame = canvas->DrawFrame(xmin, ymin, xmax, ymax);
-    
-    for(T* h : TH1vector){
-        h->Draw("E same");
-    }
-    return canvas; //???
+// updates the ranges of h0 to include h + margins
+template <class T>
+void updateRanges(T* h0, T* h) {
+    Double_t xmin, xmax, ymin, ymax, x0min, x0max, y0min, y0max;
+
+    // Xrange
+    TAxis* h0X = h0->GetXaxis();
+    TAxis* hX = h->GetXaxis();
+    xmin = hX->GetXmin();
+    x0min = h0X->GetXmin();
+    xmax = hX->GetXmax();
+    x0max = h0X->GetXmax();
+    if(xmin < h0X->GetXmin()) x0min = xmin;
+    if(xmax > h0X->GetXmax()) x0max = xmax;
+    h0X->SetRangeUser(x0min, x0max);
+
+    // Yrange
+    h0->GetMinimumAndMaximum(y0min, y0max);
+    h->GetMinimumAndMaximum(ymin, ymax);
+    if(ymin < y0min) y0min = ymin;
+    if(ymax > y0max) y0max = ymax;
+    // margins for the y-range
+    y0max = 1.1*y0max + std::sqrt(y0max); // upper margin = 10% + statistical error
+    if(y0min != 0) y0min -= std::sqrt(std::abs(y0min)); // lower margin = statistical error
+    h0->GetYaxis()->SetRangeUser(y0min, y0max);
 }
 
 // // Try to construct a method that lists all unique values of a branch in a tree. 

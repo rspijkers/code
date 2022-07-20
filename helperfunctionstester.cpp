@@ -1,5 +1,8 @@
 #include "helperfunctions.h"
+#include "TH1D.h"
+#include "TCanvas.h"
 #include "TF1.h"
+#include "TString.h"
 #include "TRandom.h"
 
 int helperfunctionstester(){
@@ -15,7 +18,12 @@ int helperfunctionstester(){
     hGaussian1->FillRandom("fGaussian1", 5000);
     hGaussian2->FillRandom("fGaussian2", 5000);
     std::vector<TH1D*> input = {hGaussian1, hGaussian2};
-    TCanvas* output = createMultiTH1(input);
+
+    TCanvas* test = new TCanvas("name", "title");
+    TH1D* h = new TH1D("hname", "htitle", 10, 0 ,10);
+    h->SetTitle("#Lambda^{-} title");
+    h->Fill(1);
+    h->Draw();
 
     return 0;
 }
