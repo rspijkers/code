@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 	Int_t partpdg;
 	Double_t partpT;
 	Double_t parteta;
-	Bool_t ssbarHardProcess;
+	Double_t pTssbar;
 	std::vector<Int_t> pdgAssoc;
 	std::vector<Double_t> pTAssoc;
 	std::vector<Double_t> etaAssoc;
@@ -86,7 +86,7 @@ int main(int argc, char** argv)
 	tree->Branch("pdgTrigger", &partpdg, "pdgTrigger/I");
 	tree->Branch("pTTrigger", &partpT, "pTTrigger/D");
 	tree->Branch("etaTrigger", &parteta, "etaTrigger/D");
-	tree->Branch("ssbarHardProcess", &ssbarHardProcess, "ssbarHardProcess/O");
+	tree->Branch("pTssbar", &pTssbar, "pTssbar/D");
 	tree->Branch("pdgAssoc", &pdgAssoc);
 	tree->Branch("pTAssoc", &pTAssoc);
 	tree->Branch("etaAssoc", &etaAssoc);
@@ -101,14 +101,16 @@ int main(int argc, char** argv)
 		int nPart = pythia.event.size();
 		int strangenessPerEvent = 0;
 		int triggersPerEvent = 0;
-
-		ssbarHardProcess = false;
+		pTssbar = -1.;
 		
 		for(int iPart = 0; iPart < nPart; iPart++) {
       		const Particle &part = pythia.event[iPart];
 			// check for hard ssbar process before final state cut
 			partpdg = part.id();
-			if(part.status()==-23 && IsStrange(partpdg)) ssbarHardProcess = true;
+			if(part.status()==-23 && abs(partpdg)==3 ) { // in case of ssbar, save the highest pT. in case only one s(bar), pT always > -1 / && part.pT() > pTssbar
+				pTssbar = part.pT(); 
+				// cout << "event: " << iEvent << ", pdg: " << partpdg << ", pT: " << part.pT() << ", status: " << part.status() << endl;
+			}
 			if(!part.isFinal()) continue; // final state particle 
 			partpT = part.pT();
 			parteta = part.eta();

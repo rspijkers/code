@@ -72,7 +72,7 @@ void tree_handler() {
     std::set<Int_t> uniqueTriggerPDGs, uniqueAssocPDGs; // to keep track of possible PDG
 
     // Set branch address, so we can use the variables when we GetEntry()
-    Bool_t ssbarHardProcess;
+    Double_t pTssbar;
     Int_t pdgTrigger;
     std::vector<Int_t>* pdgAssoc = 0;
     Double_t pTTrigger, etaTrigger;
@@ -80,7 +80,7 @@ void tree_handler() {
     std::vector<Double_t>* etaAssoc = 0;
     std::vector<Double_t>* deltaPhi = 0;
     std::vector<Double_t>* deltaEta = 0;
-    chain->SetBranchAddress("ssbarHardProcess", &ssbarHardProcess);
+    chain->SetBranchAddress("pTssbar", &pTssbar);
     chain->SetBranchAddress("pdgTrigger", &pdgTrigger);
     chain->SetBranchAddress("pdgAssoc", &pdgAssoc);
     chain->SetBranchAddress("pTTrigger", &pTTrigger);
