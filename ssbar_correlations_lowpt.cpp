@@ -83,8 +83,7 @@ int main(int argc, char** argv)
   	TH2D *hEtaPt = new TH2D("hEtaPt","p_{T} vs #eta for all particles;#eta;p_{T} (GeV/c)", 40, -4., 4., 50, 0, 10);
 	TH1D *hPDG = new TH1D("hPDG", "PDG code for trigger strange hadrons", 12000, -6000, 6000); 
 	TH1D *hPDGAssoc = new TH1D("hPDGAssoc", "PDG code for associated strange hadrons", 12000, -6000, 6000); // use Double_t to get around maximum bin content of Int_t
-	TH1I *hStrangenessPerEvent = new TH1I("hStrangenessPerEvent", "net strangeness per event", 21, -10.5, 10.5);
-	TH1I *hTriggersPerEvent = new TH1I("hTriggersPerEvent", "number of triggers per event", 10, 0, 10);
+	TH1I *hTriggersPerEvent = new TH1I("hTriggersPerEvent", "number of triggers per event", 20, 0, 20);
 
 	Int_t partpdg;
 	Double_t partpT;
@@ -118,16 +117,20 @@ int main(int argc, char** argv)
 		
 		for(int iPart = 0; iPart < nPart; iPart++) {
       		const Particle &part = pythia.event[iPart];
-			if(!part.isFinal()) continue; // final state particle 
+
 			partpdg = part.id();
+			// in case of ssbar, save the highest pT. in case only one s(bar), pT always > -1 
+			if(part.status()==-23 && abs(partpdg)==3 && part.pT() > pTssbar) pTssbar = part.pT();
+			
+			if(!part.isFinal()) continue; // final state particle 
 			partpT = part.pT();
 			parteta = part.eta();
-			Double_t partphi = part.phi();
 
 			if(!IsStrange(partpdg) || partpT < pTminTrigg || abs(parteta) > maxEta) continue; // kine cuts & strangeness check
 			// we have identified a strange trigger that satisfies the kinematic requirements
 			// If we get this far with the trigger particle, we will correlate it with other strange hadrons
 			// In order to be able to normalize, we need to keep track of how many triggers we have for each hadron
+			Double_t partphi = part.phi();
 			triggersPerEvent++;
 
 			// Clear the vectors with the associated/correlation variables
@@ -139,21 +142,8 @@ int main(int argc, char** argv)
 				Double_t part2eta = part2.eta();
 				Double_t part2phi = part2.phi();
 				Int_t part2pdg = part2.id();
-				// since we are sure we iterate over the full particle list in the assoc case, check for hard ssbar here
-				if(part2.status()==-23 && abs(part2pdg)==3 ) { // in case of ssbar, save the highest pT. in case only one s(bar), pT always > -1 / && part.pT() > pTssbar
-					pTssbar = part2.pT(); 
-					// cout << "event: " << iEvent << ", pdg: " << partpdg << ", pT: " << part.pT() << ", status: " << part.status() << endl;
-				}
 
 				if(!IsStrange(part2pdg) || !part2.isFinal() || part2pT < pTminAssoc || abs(part2eta) > maxEta) continue; // all cuts at once
-
-				if(part2pT > partpT){ // if the pT of the assoc is higher than the trigger, swap values. 
-					swap(partpT, part2pT);
-					swap(partpdg, part2pdg);
-					swap(parteta, part2eta);
-					swap(partphi, part2phi);
-				}
-				// the assoc is now the new trigger, proceed as normal
 
 				Double_t dPhi = DeltaPhi(partphi, part2phi);
 				Double_t dEta = parteta - part2eta;
@@ -164,30 +154,13 @@ int main(int argc, char** argv)
 				deltaEta.push_back(dEta);
 			} // end assoc loop
 
-			// int netStrange = strangenessFromPDG(partpdg); // not yet net strangeness
-			// // check the net strangeness
-			// if(partpdg == 310 || partpdg == 130) netStrange = 0; // K0_S/L
-			// else if(abs(partpdg) == 321 || abs(partpdg) == 311 || abs(partpdg) == 431) netStrange *= -1; // switch if kaon or D_s, PDG convention
-			// else if(netStrange == 2 && getDigitN(partpdg, 3) == 0) continue; // if a meson has 2 strange quarks, it is an ssbar state thus net zero strangeness
-
-			// int signpdg = 1;
-			// if(partpdg < 0) signpdg = -1;
-			// strangenessPerEvent += netStrange * signpdg;
-
 			hEtaPt->Fill(parteta,partpT);
 			hPDG->Fill((Double_t) partpdg);
 			tree->Fill();
-			// if(iEvent<100) for(int x : pdgAssoc) cout << iEvent << ": " << x << endl;
 
 			// only fill the associated pdg's histo once per event
-			if(triggersPerEvent == 1){
-				// This is redundant in case we only select the highest pT trigger
-				for(int x : pdgAssoc) hPDGAssoc->Fill(x);
-				break; // only select one trigger per event, so break the trigger loop once we found one. 
-			}
+			if(triggersPerEvent == 1) for(int x : pdgAssoc) hPDGAssoc->Fill(x);
 		} // end trigger loop
-		// hStrangenessPerEvent->Fill(strangenessPerEvent);
-		if(triggersPerEvent == 2) cout << "2 triggers in the same event: smt went wrong!" << endl;
 		hTriggersPerEvent->Fill(triggersPerEvent);
 	} // end event loop
 	cout << "test" << endl;
@@ -199,5 +172,4 @@ int main(int argc, char** argv)
     auto end = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::minutes>(end - start);
     cout << "This script took " << duration.count() << " minutes to run." << endl;
-
 } // end main
