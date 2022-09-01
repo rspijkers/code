@@ -2,7 +2,7 @@
 
 # This script steers a pythia simulation on stbc
 
-ENVIRONMENT="VO_ALICE@ROOT::v6-24-06-97,VO_ALICE@pythia::v8230-1" # Nikhef
+ENVIRONMENT="VO_ALICE@pythia::v8304-9,VO_ALICE@ROOT::v6-24-06-18" # Nikhef
 # ENVIRONMENT="O2/latest,pythia/latest" # Home
 echo $ENVIRONMENT
 

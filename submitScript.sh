@@ -5,7 +5,7 @@
 source /cvmfs/alice.cern.ch/etc/login.sh
 cd /user/rspijker/code # Nikhef
 
-ENVIRONMENT="VO_ALICE@ROOT::v6-24-06-97,VO_ALICE@pythia::v8230-1" # Nikhef
+ENVIRONMENT="VO_ALICE@pythia::v8304-9,VO_ALICE@ROOT::v6-24-06-18" # Nikhef
 # ENVIRONMENT="O2/latest,pythia/latest" # Home
 
 # TODO: add outputfile location as option of cpp script? 
