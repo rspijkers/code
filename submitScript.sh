@@ -15,6 +15,7 @@ ENVIRONMENT="VO_ALICE@pythia::v8304-9,VO_ALICE@ROOT::v6-24-06-18" # Nikhef
 # get job id and take only the numeric part (leave out the .burrell.nikhef.nl)
 JOB_ID=$(echo $PBS_JOBID | cut -d'.' -f 1)
 
-OUTPUTFILE="/data/alice/rspijker/output/PythiaResults$JOB_ID.root"
+OUTPUTDIR=$1
+OUTPUTFILE="$OUTPUTDIR/$JOB_ID.root"
 
 eval "alienv setenv $ENVIRONMENT -c ./ssbar_correlations $OUTPUTFILE"
