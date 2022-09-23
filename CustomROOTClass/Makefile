@@ -7,7 +7,6 @@ CXXFLAGS:=$(shell root-config --cflags) -I$(PYTHIA8)/include $(shell root-config
 ##### This is needed if you want to fill a Tree with a custom Event class for instance
 
 ROOTPATH:=$(ROOTSYS)/include 		# Path to ROOT header files (TFile.h, ...)
-PWD=$(shell pwd)					# Present Working Directory
 HEADERS=classtest.h					# Headers containing the classes
 SOURCES=classtest.cpp				# Source files accompanying the headers
 LINKDEF=linkdef.h 					# linkdef file containing pragma statements concerning which classes to include in the dictionary
@@ -44,6 +43,6 @@ test: test.cpp
 # The third makes the executable and links the required libraries. 
 #	-L. says that it should look in the current directory for libraries as well (hence the dot) when compiling
 #	-lEvent corresponds to libEvent.so (-lXXX --> libXXX.so)
-#	-Wl,rpath=$(PWD) is similar to -L., except it tells the executable to look in the current directory for libraries.
+#	-Wl,rpath=./lib is similar to -L., except it tells the executable to look in the current directory for libraries.
 #		This is important, otherwise you need to manually set the path after every compile
 # 	$(CXXFLAGS) are kinda obvious I think.
