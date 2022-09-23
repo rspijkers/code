@@ -6,7 +6,7 @@ CXXFLAGS:=$(shell root-config --cflags) -I$(PYTHIA8)/include $(shell root-config
 ##### The following section allows for ROOT I/O of custom classes:
 ##### This is needed if you want to fill a Tree with a custom Event class for instance
 
-ROOTPATH:=-I$(ROOTSYS)/include 		# Path to ROOT header files (TFile.h, ...)
+ROOTPATH:=$(ROOTSYS)/include 		# Path to ROOT header files (TFile.h, ...)
 PWD=$(shell pwd)					# Present Working Directory
 HEADERS=classtest.h					# Headers containing the classes
 SOURCES=classtest.cpp				# Source files accompanying the headers
@@ -18,22 +18,22 @@ DICT=EventDict.cpp					# Name of the dictionary to be created, can pretty much b
 test: test.cpp
 	@echo -n Making dictionary with rootcling...\  
 
-	@rootcling -f $(DICT) $(ROOTPATH) $(HEADERS) $(LINKDEF)
+	@rootcling -f lib/$(DICT) -I$(ROOTPATH) -I./include $(HEADERS) $(LINKDEF)
 
 	@echo Success!
 	@echo -n Making library libEvent.so...\ 
 
-	@g++ -shared -o libEvent.so -fPIC -std=c++17 $(ROOTPATH) $(DICT) $(SOURCES) $(root-config --ldflags --libs)
+	@g++ -shared -o lib/libEvent.so -fPIC -std=c++17 -I$(ROOTPATH) -I./include lib/$(DICT) src/$(SOURCES) $(root-config --ldflags --libs)
 	
 	@echo Success!
 	@echo -n Creating executable and linking libraries...\ 
 
-	@g++ -o $@ $^ -L. -lEvent -Wl,-rpath=$(PWD) $(CXXFLAGS)
+	@g++ -o $@ $^ -L./lib -lEvent -Wl,-rpath=./lib $(CXXFLAGS)
 
 	@echo Success!
 	@echo Looks like everything worked! Cleaning up...
 	
-	@rm $(DICT)
+	@rm lib/$(DICT)
 
 # The first line creates a dictionary EventDict.cpp from the headers supplied. 
 #	It only creates dictionaries for the classes specified in linkdef.h 
