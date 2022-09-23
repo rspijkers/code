@@ -33,11 +33,11 @@ TStyle* createStyle(Bool_t setstyle = false){
     myStyle->SetLineWidth(1);
     myStyle->SetLabelSize(0.045,"xyz");
     myStyle->SetLabelOffset(0.01,"y");
-    myStyle->SetLabelOffset(0.01,"x");
+    myStyle->SetLabelOffset(0.03,"x");
     myStyle->SetLabelColor(kBlack,"xyz");
     myStyle->SetTitleSize(0.05,"xyz");
     myStyle->SetTitleOffset(1.25,"y");
-    myStyle->SetTitleOffset(1.2,"x");
+    myStyle->SetTitleOffset(1.3,"x");
     myStyle->SetTitleFillColor(kWhite);
     myStyle->SetTextSizePixels(26);
     myStyle->SetTextFont(42);
