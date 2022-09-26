@@ -7,14 +7,16 @@ CXXFLAGS:=$(shell root-config --cflags) -I$(PYTHIA8)/include $(shell root-config
 ##### This is needed if you want to fill a Tree with a custom Event class for instance
 
 # make sure there is no whitespace after paths
+# CPATH=/user/rspijker/code# 			# NIKHEF STBC
 CPATH=/home/rik/cernbox/PhD/code# 	# path to code repository
 LIB=$(CPATH)/lib#
 SRC=$(CPATH)/src#
 INCLUDE=$(CPATH)/include#
 ROOTPATH:=$(ROOTSYS)/include# 		# Path to ROOT header files (TFile.h, ...)
-HEADERS=classtest.h#				# Headers containing the classes
-SOURCES=classtest.cpp#				# Source files accompanying the headers
-LINKDEF=linkdef.h# 					# linkdef file containing pragma statements concerning which classes to include in the dictionary
+HEADERS = SmallTrack.h SmallEvent.h#				# Headers containing the classes
+FILES = SmallTrack.cpp SmallEvent.cpp#				# Source files accompanying the headers
+SOURCES = $(FILES:%.cpp=$(SRC)/%.cpp)			# prepend source dir to filenames.
+LINKDEF = linkdef.h# 					# linkdef file containing pragma statements concerning which classes to include in the dictionary
 DICT=EventDict.cpp#					# Name of the dictionary to be created, can pretty much be anything
 
 # Only do this if test.cpp exists. Executing `make test` targets this specifically. Explanation of the recipe below.
@@ -27,7 +29,7 @@ ssbar_correlations_lowpt: ssbar_correlations_lowpt.cpp
 	@echo Success!
 	@echo -n Making library libEvent.so...\ 
 
-	@g++ -shared -o $(LIB)/libEvent.so -fPIC -std=c++17 -I$(ROOTPATH) -I$(INCLUDE) $(LIB)/$(DICT) $(SRC)/$(SOURCES) $(root-config --ldflags --libs)
+	@g++ -shared -o $(LIB)/libEvent.so -fPIC -std=c++17 -I$(ROOTPATH) -I$(INCLUDE) -I$(SRC) $(LIB)/$(DICT) $(SOURCES) $(root-config --ldflags --libs)
 	
 	@echo Success!
 	@echo -n Creating executable and linking libraries...\ 

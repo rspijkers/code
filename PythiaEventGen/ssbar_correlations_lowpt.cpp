@@ -11,10 +11,9 @@
 #include "TH2F.h"
 #include "TH1I.h"
 #include "TTree.h"
-#include "TClonesArray.h"
 // custom
 #include "helperfunctions.h"
-#include "classtest.h"
+#include "SmallEvent.h"
 
 #define PI 3.14159265
 
@@ -107,41 +106,22 @@ int main(int argc, char** argv)
 	Double_t partpT;
 	Double_t parteta;
 	Double_t pTssbar;
-	// std::vector<SmallTrack> candidates;
-	// std::vector<Double_t> pTAssoc;
-	// std::vector<Double_t> etaAssoc;
-	// std::vector<Double_t> deltaPhi;
-	// std::vector<Double_t> deltaEta;
-	// TTree *tree = new TTree("tree", "tree with trigger/assoc strange hadrons");
-	// tree->Branch("pdgTrigger", &partpdg, "pdgTrigger/I");
-	// tree->Branch("pTTrigger", &partpT, "pTTrigger/D");
-	// tree->Branch("etaTrigger", &parteta, "etaTrigger/D");
-	// tree->Branch("pTssbar", &pTssbar, "pTssbar/D");
-	// tree->Branch("pdgAssoc", &pdgAssoc);
-	// tree->Branch("pTAssoc", &pTAssoc);
-	// tree->Branch("etaAssoc", &etaAssoc);
-	// tree->Branch("deltaPhi", &deltaPhi);
-	// tree->Branch("deltaEta", &deltaEta);
-
-	// #pragma link C++ class TestEvent+;
 	
-	// ClassImp(TestEvent);
-	
-	TestEvent *event = new TestEvent();
+	SmallEvent *event = new SmallEvent();
+	SmallTrack track;
 	TTree *tree = new TTree("tree", "tree with small events and small tracks");
-	tree->Branch("event", &event, 32000, 999); // just to be sure
-	// tree->Branch("track", &candidates, 32000, 999); // just to be sure
+	tree->Branch("event", &event); 
 
 	cout << "Generating " << nEvents << " events..." << endl;
-	// event loop
-	for(int iEvent = 0; iEvent < nEvents; iEvent++) {
+	for(int iEvent = 0; iEvent < nEvents; iEvent++) { // event loop
 		if(!pythia.next()) continue;
 
 		int nPart = pythia.event.size();
 		int candidatesPerEvent = 0;
+		int nFinalState = 0;
 		pTssbar = -1.;
 		
-		for(int iPart = 0; iPart < nPart; iPart++) {
+		for(int iPart = 0; iPart < nPart; iPart++) { // particle loop
       		const Particle &part = pythia.event[iPart];
 
 			partpdg = part.id();
@@ -149,6 +129,7 @@ int main(int argc, char** argv)
 			if(part.status()==-23 && abs(partpdg)==3 && part.pT() > pTssbar) pTssbar = part.pT();
 			
 			if(!part.isFinal()) continue; // final state particle 
+			nFinalState++;
 			partpT = part.pT();
 			parteta = part.eta();
 
@@ -156,36 +137,25 @@ int main(int argc, char** argv)
 			// we have identified a strange trigger that satisfies the kinematic requirements
 			// If we get this far with the trigger particle, we will correlate it with other strange hadrons
 			// In order to be able to normalize, we need to keep track of how many triggers we have for each hadron
+
 			Double_t partphi = part.phi();
+
+			track.setPDG(partpdg);
+			track.setpT(partpT);
+			track.setEta(parteta);
+			track.setPhi(partphi);
+			event->addCandidate(track);
+			track.Clear();
+
 			candidatesPerEvent++;
-			// // Clear the vectors with the associated/correlation variables
-			// pdgAssoc.clear(); pTAssoc.clear(); etaAssoc.clear(); deltaPhi.clear(); deltaEta.clear();
-			// for(int jPart = 0; jPart < nPart; jPart++) {
-			// 	if(jPart == iPart) continue; // don't correlate particle with itself
-			// 	const Particle &part2 = pythia.event[jPart];
-			// 	Double_t part2pT = part2.pT();
-			// 	Double_t part2eta = part2.eta();
-			// 	Double_t part2phi = part2.phi();
-			// 	Int_t part2pdg = part2.id();
-
-			// 	if(!IsStrange(part2pdg) || !part2.isFinal() || part2pT < pTminAssoc || abs(part2eta) > maxEta) continue; // all cuts at once
-
-			// 	Double_t dPhi = DeltaPhi(partphi, part2phi);
-			// 	Double_t dEta = parteta - part2eta;
-			// 	pdgAssoc.push_back(part2pdg);
-			// 	pTAssoc.push_back(part2pT);
-			// 	etaAssoc.push_back(part2eta);
-			// 	deltaPhi.push_back(dPhi);
-			// 	deltaEta.push_back(dEta);
-			// } // end assoc loop
 
 			hEtaPt->Fill(parteta,partpT);
 			hPDG->Fill((Double_t) partpdg);
-
-			// only fill the associated pdg's histo once per event
-			// if(triggersPerEvent == 1) for(int x : pdgAssoc) hPDGAssoc->Fill(x);
-		} // end trigger loop
+		} // end track loop
+		event->setEventId(eventIdOffset+iEvent);
+		event->setNtracks(nFinalState);
 		tree->Fill();
+		event->Clear();
 		hCandidatesPerEvent->Fill(candidatesPerEvent);
 	} // end event loop
 	outFile->Write();
@@ -194,7 +164,7 @@ int main(int argc, char** argv)
 
 	// stop keeping track of time, and calculate how long it took
     auto end = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::minutes>(end - start);
-    cout << "This script took " << duration.count() << " minutes to run." << endl;
+	auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+    cout << "This script took " << duration.count()/60. << " minutes to run." << endl;
 	return 0;
 } // end main
