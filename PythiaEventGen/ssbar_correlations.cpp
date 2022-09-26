@@ -68,8 +68,7 @@ int main(int argc, char** argv)
 
 	// Analysis settings
 	const Bool_t	doUnderlyingEvent = false;
-	const Double_t 	pTminTrigg = 0.15;
-	const Double_t 	pTminAssoc = 0.15;
+	const Double_t 	pTmin = 0.15;
 	const Double_t 	maxEta = 4.;
 
 	Pythia pythia;
@@ -133,7 +132,7 @@ int main(int argc, char** argv)
 			partpT = part.pT();
 			parteta = part.eta();
 
-			if(!IsStrange(partpdg) || partpT < pTminTrigg || abs(parteta) > maxEta) continue; // kine cuts & strangeness check
+			if(!IsStrange(partpdg) || partpT < pTmin || abs(parteta) > maxEta) continue; // kine cuts & strangeness check
 			// we have identified a strange trigger that satisfies the kinematic requirements
 			// If we get this far with the trigger particle, we will correlate it with other strange hadrons
 			// In order to be able to normalize, we need to keep track of how many triggers we have for each hadron
