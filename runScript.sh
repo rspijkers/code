@@ -11,15 +11,13 @@ OUTPUTPATH="/data/alice/rspijker/output"
 OUTPUTDIR="Monash_pp_5M_14TeV"
 [ ! -d "$OUTPUTPATH/$OUTPUTDIR" ] && mkdir -p "$OUTPUTPATH/$OUTPUTDIR" && echo "outputdir created"
 
-# cd /user/rspijker/code # Nikhef
-# if [[ ! -d "output" ]]
-# then 
-#     mkdir output
-# fi
+
 # make pythia script
-eval "alienv setenv $ENVIRONMENT -c make ssbar_correlations"
+eval "alienv setenv $ENVIRONMENT -c make ssbar_correlations -B"
+
+# submit the jobs
 for i in {1..10}
 do
     echo "submit number $i"
-    qsub -F "$OUTPUTPATH/$OUTPUTDIR" submitScript.sh
+    qsub -F "$OUTPUTPATH/$OUTPUTDIR $i" submitScript.sh
 done

@@ -21,7 +21,7 @@ DICT=EventDict.cpp#					# Name of the dictionary to be created, can pretty much 
 
 # Only do this if test.cpp exists. Executing `make test` targets this specifically. Explanation of the recipe below.
 # remove all the '@' at the start of the lines for debugging
-ssbar_correlations_lowpt: ssbar_correlations_lowpt.cpp
+ssbar_correlations: ssbar_correlations.cpp
 	@echo -n Making dictionary with rootcling...\  
 
 	@rootcling -f $(LIB)/$(DICT) -I$(ROOTPATH) -I$(INCLUDE) $(HEADERS) $(LINKDEF)
