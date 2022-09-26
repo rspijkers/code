@@ -6,7 +6,7 @@
 #pragma link C++ nestedclasses;
 
 // List all your classes that require Dictionary generation:
-#pragma link C++ class TestEvent+;
-// #pragma link C++ class TTree::Branch<TestEvent>+;
+#pragma link C++ class SmallTrack+;
+#pragma link C++ class SmallEvent+;
 
 #endif
