@@ -4,6 +4,7 @@
 // std
 #include <iostream> // cout and stuff
 #include <cmath> // sinh, cosh, tanh, abs
+#include <fstream>
 // ROOT
 #include "TFile.h"
 #include "TTree.h"
@@ -13,6 +14,13 @@
 #include "TObject.h"
 // custom
 #include "myStyle.h" // check to see if it can find the file first? otherwise the entire header is useless
+
+const double PI = 3.14159265358979323846;
+
+Double_t DeltaPhi(Double_t phi1, Double_t phi2){
+	// returns phi1 - phi2 in a range between -pi/2 and 3pi/2
+	return std::fmod(phi1 - phi2 + 2.5*PI, 2*PI) - 0.5*PI;
+}
 
 double rapidityFromEta(double eta, double pt, double m){
     /*Converts pseudorapidity to rapidity.*/
@@ -89,6 +97,29 @@ void updateRanges(T* h0, T* h) {
     if(y0min != 0) y0min -= std::sqrt(std::abs(y0min)); // lower margin = statistical error
     h0->GetYaxis()->SetRangeUser(y0min, y0max);
 }
+
+// csv parser for x,y values. 
+template <class T>
+int CSVtoXYArrays(T filepath, std::vector<Double_t>* x, std::vector<Double_t>* y){
+    std::ifstream mFile(filepath);
+    std::string val;
+    if(mFile.is_open()){
+        // read file
+        while(!mFile.eof()){
+            getline(mFile, val,',');
+            if(val.empty()) return 1;
+            x->push_back(std::stod(val));
+            getline(mFile, val);
+            if(val.empty()) return 1;
+            y->push_back(std::stod(val));
+        }
+    } else {
+        std::cout << "Error in CSVtoXYArrays: Could not open file!" << std::endl;
+        return 1;
+    }
+    return 0;
+}
+
 
 // // Try to construct a method that lists all unique values of a branch in a tree. 
 // void ListUniqueValues(TBranch* branch){
