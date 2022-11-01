@@ -11,7 +11,6 @@
 #include "TChain.h"
 #include "TChainElement.h"
 #include "TSystem.h"
-// #include "TRandom.h"
 // custom
 #include "include/hadrons.h"
 #include "include/helperfunctions.h"
@@ -34,8 +33,7 @@ TH1D makeEfficiency(const char* filepath, Double_t BR = 1){
 
 int main() {
     gSystem->Load("lib/libEvent.so");
-    // gRandom->SetSeed(0);
-    TH1::SetDefaultSumw2(); // make sure errors are propagated in histo's
+    // TH1::SetDefaultSumw2(); // make sure errors are propagated in histo'ss
     
     // stbc input filepath = "/data/alice/rspijker/output/monash_pp_50M_14TeV_Trigger4GeV/"
 
@@ -142,6 +140,7 @@ int main() {
     const Double_t minpT = 0.15;
     const Double_t maxEtaTrigger = 2.0;
     const Double_t maxEtaAssoc = 3.0;
+    const Double_t maxRapidity = 0.5;
     const Bool_t BkgScaling =  false; // do bkg scaling, needed to account for asymmetry in pp collisions
     std::set<Int_t> uniqueTriggerPDGs, uniqueAssocPDGs; // to keep track of possible PDG
 
@@ -173,11 +172,10 @@ int main() {
                 XiMap = &XiZeroMap;
             } else continue;
             // found a Xi, kine cuts
-            if (XiCand.getpT() < minpT || XiCand.geteta() > maxEtaTrigger) continue; 
+            // if (XiCand.getpT() < minpT || XiCand.geteta() > maxEtaTrigger) continue; 
+            if (XiCand.getpT() < minpT || rapidityFromEta(XiCand.geteta(), XiCand.getpT(), 1.320) > maxRapidity) continue; // Xi's are roughly 1.320 GeV
             // do eff cut here:
-            // TODO: Maybe implement averages here? instead of probabilistic rejection
             Double_t eff = hXiEff->GetBinContent(hXiEff->GetBin(XiCand.getpT()));
-            // if(gRandom->Uniform() > eff) continue;
             // keep track of strangeness
             Int_t SS = StrangeHadronPDGMap.at(pdg)->getStrangeness();
             
@@ -185,7 +183,7 @@ int main() {
                 if(i == j) continue; // don't correlate with self
                 Assoc = cands[j];
                 // kine cuts 
-                if(Assoc.getpT() < minpT || Assoc.geteta() > maxEtaAssoc) continue; 
+                if(Assoc.getpT() < minpT || rapidityFromEta(Assoc.geteta(), Assoc.getpT(), StrangeHadronPDGMap.at(Assoc.getPDG())->getMass()) > maxRapidity) continue; 
 
                 Int_t pdgAssoc = Assoc.getPDG();
                 // skip K0's
@@ -216,11 +214,17 @@ int main() {
     hXiMinRatio->SetName("hXiMinRatio");
     hXiMinRatio->SetTitle("test");
     for(auto bla : XiMinMap){
+        // reset errors to be equal to sqrt(N), needed when filling with weights due to efficiency
+        bla.second.hOS->GetSumw2()->Set(0);
+        bla.second.hOS->Sumw2();
+        bla.second.hSS->GetSumw2()->Set(0);
+        bla.second.hSS->Sumw2();
+        // make ratio plot
         TString binname = StrangeHadronPDGMap.at(bla.first)->getAntiParticle()->getLatex();
         Double_t nOS = bla.second.nOS;
         Double_t nSS = bla.second.nSS;
         Double_t bincontent = nOS - nSS;
-        Double_t error = sqrt(nOS*nOS + nSS*nSS);
+        Double_t error = sqrt(nOS + nSS);
 
         binnr = hXiMinRatio->Fill(binname, bincontent);
         hXiMinRatio->SetBinError(binnr, error);
