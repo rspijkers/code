@@ -171,8 +171,8 @@ int main() {
             try{
                 SS = StrangeHadronPDGMap.at(pdg)->getStrangeness();
             } catch (std::out_of_range){
-                std::cout << "unknown pdg, aborted: " << pdg << std::endl;
-                return pdg;
+                std::cout << "unknown pdg, skipping. pdg = " << pdg << std::endl;
+                continue;
             }
             
             for(Int_t j = 0; j < nCands; j++){
@@ -183,8 +183,8 @@ int main() {
                 try{
                     mass = StrangeHadronPDGMap.at(Assoc.getPDG())->getMass();
                 } catch (std::out_of_range){
-                    std::cout << "unknown pdg, aborted: " << Assoc.getPDG() << std::endl;
-                    return Assoc.getPDG();
+                    std::cout << "unknown pdg, skipping. pdg = " << Assoc.getPDG() << std::endl;
+                    continue;
                 }
                 if(Assoc.getpT() < minpT || rapidityFromEta(Assoc.geteta(), Assoc.getpT(), mass) > maxRapidity) continue; 
 
