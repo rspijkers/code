@@ -35,7 +35,11 @@ int main() {
     gSystem->Load("lib/libEvent.so");
     // TH1::SetDefaultSumw2(); // make sure errors are propagated in histo'ss
     
-    // stbc input filepath = "/data/alice/rspijker/output/monash_pp_50M_14TeV_Trigger4GeV/"
+    // stbc input filepaths:
+    // "/data/alice/rspijker/output/220926_Monash_pp_10M_14TeV_minpT0p15/"
+    // "/data/alice/rspijker/output/220926_Monash_ppbar_10M_14TeV_minpT0p15/"
+    // "/data/alice/rspijker/output/220926_Ropes_pp_10M_14TeV_minpT0p15/"
+    // "/data/alice/rspijker/output/220926_SkandsMode2_pp_10M_14TeV_minpT0p15/"
 
     TChain* chain = new TChain("tree");
     chain->Add("PythiaEventGen/test.root");
@@ -58,16 +62,6 @@ int main() {
 
     TFile* outputfile = new TFile("treev2eff.root", "RECREATE");
 
-    // okay from here we want to do things differently. loop over cands to find Xi's, then again to make pairs. (in future make general loop not only for Xi's). apply cuts on the fly, then add to histo's. probably also just keep track of number of pairs so we can easily make the ratio plots without doing funky projections?
-
-    /* 
-    In case of the Xi's we can make two maps: one for Xi^- one for Xi0. each one maps the pdg of the assoc to the relevant data and histograms. We can probably use the following data:
-    - dphi histo
-        - 2 histo's, one for SS one for OS
-    - Integrated yields, for quick access (needed for ratio plots)
-        - also 2 ofcourse
-    */
-
     struct XiStruct{
         TH1D* hSS;
         TH1D* hOS;
@@ -84,11 +78,7 @@ int main() {
     std::copy(_XiEff.begin(), _XiEff.end(), XiEff);
     TH1D* hXiEff = new TH1D("hXiEff", "Efficiency for Xi", effbins - 1, XiBinEdges); 
     for(int i = 0; i < effbins; i++) hXiEff->SetBinContent(i+1, 0.64*XiEff[i]); // 64% is the BR for Lambda to p + pion
-    // std::cout << hXiEff->GetBinContent(effbins) << hXiEff->GetBinContent(effbins+1) << std::endl;
     // TODO: handle under- and overflow: underflow is 0 probably good, but overflow > 0.
-
-    // const std::vector<Hadron> hadron_vec = {Kzeroshort, Kzerolong, Kminus, Lambda, Sigmaminus, Sigmazero, Sigmaplus, Ximinus, Xizero, Omegaminus, Dsubs, Bsubs, Xicplus, Xiczero, Xibmin, Xibzero, Omegac, Omegab, Omegacc, Omegabb, Omegabc};
-    // const Int_t nbins = hadron_vec.size();
 
     // Make vector with all the strange hadrons
     std::vector<Hadron*> posStrangeHadrons;
@@ -207,7 +197,6 @@ int main() {
             }
         }
     }
-    // std::cout << XiMinMap.at(-321).nSS << XiMinMap.at(-321).nOS << std::endl;
     // do ratio plots here:
     // Don't forget to handle the K0's
     TH1D* hXiMinRatio = (TH1D*) hTempRatio->Clone();
@@ -215,10 +204,22 @@ int main() {
     hXiMinRatio->SetTitle("test");
     for(auto bla : XiMinMap){
         // reset errors to be equal to sqrt(N), needed when filling with weights due to efficiency
-        bla.second.hOS->GetSumw2()->Set(0);
-        bla.second.hOS->Sumw2();
-        bla.second.hSS->GetSumw2()->Set(0);
-        bla.second.hSS->Sumw2();
+        // scale with expected N events before resetting sumw2
+        TH1D* OS = bla.second.hOS;
+        TH1D* SS = bla.second.hOS;
+        OS->Scale(100);
+        OS->GetSumw2()->Set(0);
+        OS->Sumw2();
+        SS->Scale(100);
+        SS->GetSumw2()->Set(0);
+        SS->Sumw2();
+
+        // TODO: make OS - SS plot (perhaps also compute integral?)
+        TH1D* hSignal = (TH1D*) hTempDPhi->Clone();
+        TString name = OS->GetName();
+        hSignal->SetName(name + "_subtracted");
+        hSignal->Add(OS, SS, 1, -1);
+
         // make ratio plot
         TString binname = StrangeHadronPDGMap.at(bla.first)->getAntiParticle()->getLatex();
         Double_t nOS = bla.second.nOS;
@@ -228,10 +229,7 @@ int main() {
 
         binnr = hXiMinRatio->Fill(binname, bincontent);
         hXiMinRatio->SetBinError(binnr, error);
-        // std::cout << nSS << std::endl;
     }
-    // std::cout << hXiMinRatio->GetBinContent(2) << std::endl;
-    // hXiMinRatio->Write();
 
     outputfile->Write();
     outputfile->Close();
