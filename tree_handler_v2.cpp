@@ -206,7 +206,7 @@ int main() {
         // reset errors to be equal to sqrt(N), needed when filling with weights due to efficiency
         // scale with expected N events before resetting sumw2
         TH1D* OS = bla.second.hOS;
-        TH1D* SS = bla.second.hOS;
+        TH1D* SS = bla.second.hSS;
         OS->Scale(100);
         OS->GetSumw2()->Set(0);
         OS->Sumw2();
