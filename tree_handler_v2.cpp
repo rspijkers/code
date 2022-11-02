@@ -167,13 +167,26 @@ int main() {
             // do eff cut here:
             Double_t eff = hXiEff->GetBinContent(hXiEff->GetBin(XiCand.getpT()));
             // keep track of strangeness
-            Int_t SS = StrangeHadronPDGMap.at(pdg)->getStrangeness();
+            Int_t SS;
+            try{
+                SS = StrangeHadronPDGMap.at(pdg)->getStrangeness();
+            } catch (std::out_of_range){
+                std::cout << "unknown pdg, aborted: " << pdg << std::endl;
+                return pdg;
+            }
             
             for(Int_t j = 0; j < nCands; j++){
                 if(i == j) continue; // don't correlate with self
                 Assoc = cands[j];
                 // kine cuts 
-                if(Assoc.getpT() < minpT || rapidityFromEta(Assoc.geteta(), Assoc.getpT(), StrangeHadronPDGMap.at(Assoc.getPDG())->getMass()) > maxRapidity) continue; 
+                Double_t mass;
+                try{
+                    mass = StrangeHadronPDGMap.at(Assoc.getPDG())->getMass();
+                } catch (std::out_of_range){
+                    std::cout << "unknown pdg, aborted: " << Assoc.getPDG() << std::endl;
+                    return Assoc.getPDG();
+                }
+                if(Assoc.getpT() < minpT || rapidityFromEta(Assoc.geteta(), Assoc.getpT(), mass) > maxRapidity) continue; 
 
                 Int_t pdgAssoc = Assoc.getPDG();
                 // skip K0's
@@ -214,6 +227,8 @@ int main() {
         SS->GetSumw2()->Set(0);
         SS->Sumw2();
 
+
+
         // TODO: make OS - SS plot (perhaps also compute integral?)
         TH1D* hSignal = (TH1D*) hTempDPhi->Clone();
         TString name = OS->GetName();
@@ -222,8 +237,8 @@ int main() {
 
         // make ratio plot
         TString binname = StrangeHadronPDGMap.at(bla.first)->getAntiParticle()->getLatex();
-        Double_t nOS = bla.second.nOS;
-        Double_t nSS = bla.second.nSS;
+        Double_t nOS = 100*bla.second.nOS;
+        Double_t nSS = 100*bla.second.nSS;
         Double_t bincontent = nOS - nSS;
         Double_t error = sqrt(nOS + nSS);
 
