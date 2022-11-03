@@ -87,7 +87,7 @@ int main() {
 
     std::map<Int_t, XiStruct> XiMinMap; 
     std::map<Int_t, XiStruct> XiZeroMap; 
-    TH1D* hTempDPhi = new TH1D("hTempDPhi", "Overwrite this title", 50, -0.5*PI, 1.5*PI);
+    TH1D* hTempDPhi = new TH1D("hTempDPhi", "Overwrite this title", 32, -0.5*PI, 1.5*PI); // 32 bins is easy to rebin
     TH1D* hTempRatio = new TH1D("hTempRatio", "template", nbins, 0, nbins); 
     TAxis* ax = hTempRatio->GetXaxis();
     hTempRatio->SetXTitle("Associate hadron");
@@ -127,6 +127,7 @@ int main() {
     }
 
     // Analysis options
+    const Bool_t doEff = true;
     const Double_t minpT = 0.15;
     const Double_t maxEtaTrigger = 2.0;
     const Double_t maxEtaAssoc = 3.0;
@@ -163,9 +164,14 @@ int main() {
             } else continue;
             // found a Xi, kine cuts
             // if (XiCand.getpT() < minpT || XiCand.geteta() > maxEtaTrigger) continue; 
-            if (XiCand.getpT() < minpT || rapidityFromEta(XiCand.geteta(), XiCand.getpT(), 1.320) > maxRapidity) continue; // Xi's are roughly 1.320 GeV
+            Double_t y = rapidityFromEta(XiCand.geteta(), XiCand.getpT(), 1.320);
+            if (XiCand.getpT() < minpT || y > maxRapidity) continue; // Xi's are roughly 1.320 GeV
             // do eff cut here:
-            Double_t eff = hXiEff->GetBinContent(hXiEff->GetBin(XiCand.getpT()));
+            Double_t eff = 1;
+            if(doEff){
+                eff *= hXiEff->GetBinContent(hXiEff->GetBin(XiCand.getpT()));
+                if(0.5 < abs(y)) eff*= 2*(1-y); // we already know y < ymax
+            }
             // keep track of strangeness
             Int_t SS;
             try{
@@ -186,11 +192,18 @@ int main() {
                     std::cout << "unknown pdg, skipping. pdg = " << Assoc.getPDG() << std::endl;
                     continue;
                 }
-                if(Assoc.getpT() < minpT || rapidityFromEta(Assoc.geteta(), Assoc.getpT(), mass) > maxRapidity) continue; 
+
+                Double_t y2 = rapidityFromEta(Assoc.geteta(), Assoc.getpT(), mass);
+                if(Assoc.getpT() < minpT || y2 > maxRapidity) continue; 
 
                 Int_t pdgAssoc = Assoc.getPDG();
                 // skip K0's
                 if(pdgAssoc == Kzeroshort.getPDG() || pdgAssoc == Kzerolong.getPDG()) continue;
+                //efficiency in case of Ximin
+                if(doEff && abs(pdgAssoc) == Ximinus.getPDG()) {
+                    eff *= hXiEff->GetBinContent(hXiEff->GetBin(Assoc.getpT()));
+                    if(0.5 < abs(y2)) eff*= 2*(1-y2); // we already know y < ymax
+                }
                 Double_t dphi = DeltaPhi(XiCand.getphi(), Assoc.getphi());
                 try{
                     fillXi = &XiMap->at(pdgAssoc);
@@ -202,10 +215,10 @@ int main() {
                 // fill correct dphi hist and update yield.
                 if(SS >= 1){
                     fillXi->hSS->Fill(dphi, eff);
-                    fillXi->nSS+=eff;
+                    fillXi->nSS++;
                 } else {
                     fillXi->hOS->Fill(dphi, eff);
-                    fillXi->nOS+=eff;
+                    fillXi->nOS++;
                 }
             }
         }
@@ -216,18 +229,18 @@ int main() {
     hXiMinRatio->SetName("hXiMinRatio");
     hXiMinRatio->SetTitle("test");
     for(auto bla : XiMinMap){
-        // reset errors to be equal to sqrt(N), needed when filling with weights due to efficiency
-        // scale with expected N events before resetting sumw2
         TH1D* OS = bla.second.hOS;
         TH1D* SS = bla.second.hSS;
-        OS->Scale(100);
+        // scale with expected N events before resetting sumw2
+        if(doEff){
+            OS->Scale(100);
+            SS->Scale(100);
+        }
+        // reset errors to be equal to sqrt(N), needed when filling with weights due to efficiency
         OS->GetSumw2()->Set(0);
         OS->Sumw2();
-        SS->Scale(100);
         SS->GetSumw2()->Set(0);
         SS->Sumw2();
-
-
 
         // TODO: make OS - SS plot (perhaps also compute integral?)
         TH1D* hSignal = (TH1D*) hTempDPhi->Clone();
