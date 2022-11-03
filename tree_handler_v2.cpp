@@ -165,12 +165,12 @@ int main() {
             // found a Xi, kine cuts
             // if (XiCand.getpT() < minpT || XiCand.geteta() > maxEtaTrigger) continue; 
             Double_t y = rapidityFromEta(XiCand.geteta(), XiCand.getpT(), 1.320);
-            if (XiCand.getpT() < minpT || y > maxRapidity) continue; // Xi's are roughly 1.320 GeV
+            if (XiCand.getpT() < minpT || abs(y) > maxRapidity) continue; // Xi's are roughly 1.320 GeV
             // do eff cut here:
             Double_t eff = 1;
             if(doEff){
                 eff *= hXiEff->GetBinContent(hXiEff->GetBin(XiCand.getpT()));
-                if(0.5 < abs(y)) eff*= 2*(1-y); // we already know y < ymax
+                if(0.5 < abs(y)) eff*= 2*(1-abs(y)); // we already know y < ymax
             }
             // keep track of strangeness
             Int_t SS;
@@ -194,7 +194,7 @@ int main() {
                 }
 
                 Double_t y2 = rapidityFromEta(Assoc.geteta(), Assoc.getpT(), mass);
-                if(Assoc.getpT() < minpT || y2 > maxRapidity) continue; 
+                if(Assoc.getpT() < minpT || abs(y2) > maxRapidity) continue; 
 
                 Int_t pdgAssoc = Assoc.getPDG();
                 // skip K0's
@@ -202,7 +202,7 @@ int main() {
                 //efficiency in case of Ximin
                 if(doEff && abs(pdgAssoc) == Ximinus.getPDG()) {
                     eff *= hXiEff->GetBinContent(hXiEff->GetBin(Assoc.getpT()));
-                    if(0.5 < abs(y2)) eff*= 2*(1-y2); // we already know y < ymax
+                    if(0.5 < abs(y2)) eff*= 2*(1-abs(y2)); // we already know y < ymax
                 }
                 Double_t dphi = DeltaPhi(XiCand.getphi(), Assoc.getphi());
                 try{
@@ -250,8 +250,8 @@ int main() {
 
         // make ratio plot
         TString binname = StrangeHadronPDGMap.at(bla.first)->getAntiParticle()->getLatex();
-        Double_t nOS = 100*bla.second.nOS;
-        Double_t nSS = 100*bla.second.nSS;
+        Double_t nOS = bla.second.nOS;
+        Double_t nSS = bla.second.nSS;
         Double_t bincontent = nOS - nSS;
         Double_t error = sqrt(nOS + nSS);
 
