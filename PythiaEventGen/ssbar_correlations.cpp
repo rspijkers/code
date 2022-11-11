@@ -33,12 +33,6 @@ bool IsStrange(Int_t particlepdg) {
 	return false;
 }
 
-// TODO: move this to helperfunctions.cpp?
-Double_t DeltaPhi(Double_t phi1, Double_t phi2){
-	// returns phi1 - phi2 in a range between -pi/2 and 3pi/2
-	return std::fmod(phi1 - phi2 + 2.5*PI, 2*PI) - 0.5*PI;
-}
-
 int main(int argc, char** argv)
 {	
 	Int_t runNr = 0;
