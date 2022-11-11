@@ -70,15 +70,21 @@ int main() {
     };
 
     // make efficiency
-    std::vector<Double_t> _XiBinEdges, _XiEff;
-    CSVtoXYArrays("efficiencies/XiMin.csv", &_XiBinEdges, &_XiEff);
-    const Int_t effbins = _XiEff.size();
-    Double_t XiBinEdges[effbins], XiEff[effbins]; // one more entry for edges: also the upper edge of last bin
-    std::copy(_XiBinEdges.begin(), _XiBinEdges.end(), XiBinEdges);
-    std::copy(_XiEff.begin(), _XiEff.end(), XiEff);
-    TH1D* hXiEff = new TH1D("hXiEff", "Efficiency for Xi", effbins - 1, XiBinEdges); 
-    for(int i = 0; i < effbins; i++) hXiEff->SetBinContent(i+1, 0.64*XiEff[i]); // 64% is the BR for Lambda to p + pion
-    // TODO: handle under- and overflow: underflow is 0 probably good, but overflow > 0.
+    // std::vector<Double_t> _XiBinEdges, _XiEff;
+    // CSVtoXYArrays("efficiencies/XiMin.csv", &_XiBinEdges, &_XiEff);
+    // const Int_t effbins = _XiEff.size();
+    // Double_t XiBinEdges[effbins], XiEff[effbins]; // one more entry for edges: also the upper edge of last bin
+    // std::copy(_XiBinEdges.begin(), _XiBinEdges.end(), XiBinEdges);
+    // std::copy(_XiEff.begin(), _XiEff.end(), XiEff);
+    // TH1D* hXiEff = new TH1D("hXiEff", "Efficiency for Xi", effbins - 1, XiBinEdges); 
+    // for(int i = 0; i < effbins; i++) hXiEff->SetBinContent(i+1, 0.64*XiEff[i]); // 64% is the BR for Lambda to p + pion
+    // // TODO: handle under- and overflow: underflow is 0 probably good, but overflow > 0.
+
+    TH1D hXiEffobj = makeEfficiency("efficiencies/XiMin.csv", 0.64);
+    TH1D* hXiEff = &hXiEffobj;
+
+    TH1D hOmegaEffobj = makeEfficiency("efficiencies/XiMin.csv", 0.68*0.64); //Omega -> Lambda K- ~ 68%
+    TH1D* hOmegaEff = &hOmegaEffobj;
 
     // Make vector with all the strange hadrons
     std::vector<Hadron*> posStrangeHadrons;
@@ -87,6 +93,7 @@ int main() {
 
     std::map<Int_t, XiStruct> XiMinMap; 
     std::map<Int_t, XiStruct> XiZeroMap; 
+    std::map<Int_t, XiStruct> OmegaMap;
     TH1D* hTempDPhi = new TH1D("hTempDPhi", "Overwrite this title", 32, -0.5*PI, 1.5*PI); // 32 bins is easy to rebin
     TH1D* hTempRatio = new TH1D("hTempRatio", "template", nbins, 0, nbins); 
     TAxis* ax = hTempRatio->GetXaxis();
@@ -124,14 +131,28 @@ int main() {
         XiZero.hSS = hSS1;
         XiZero.hOS = hOS1;
         XiZeroMap[pdg] = XiZero;
+
+        // do Omega quickly here
+        XiStruct Omega;
+
+        TH1D* hSS2 = (TH1D*) hTempDPhi->Clone();
+        hSS2->SetName("Omega-"+assoc->getName()+"Dphi");
+        hSS2->SetTitle("#Omega^{-}(#Omega^{+}) - " + latex + "(" + antilatex + ") correlations");
+        TH1D* hOS2 = (TH1D*) hTempDPhi->Clone();
+        hOS2->SetName("Omega-"+antiassoc->getName()+"Dphi");
+        hOS2->SetTitle("#Omega^{-}(#Omega^{+}) - " + antilatex + "(" + latex + ") correlations");
+
+        Omega.hSS = hSS2;
+        Omega.hOS = hOS2;
+        OmegaMap[pdg] = Omega;
     }
 
     // Analysis options
     const Bool_t doEff = true;
-    const Double_t minpT = 0.15;
+    const Double_t minpT = 1.20;
     const Double_t maxEtaTrigger = 2.0;
     const Double_t maxEtaAssoc = 3.0;
-    const Double_t maxRapidity = 0.5;
+    const Double_t maxRapidity = 1.0;
     const Bool_t BkgScaling =  false; // do bkg scaling, needed to account for asymmetry in pp collisions
     std::set<Int_t> uniqueTriggerPDGs, uniqueAssocPDGs; // to keep track of possible PDG
 
@@ -157,10 +178,14 @@ int main() {
             Int_t abspdg = abs(pdg);
 
             // look for Xi
+            Bool_t isXi = true; // ad hoc check for xi or omega
             if(abspdg == Ximinus.getPDG()){
                 XiMap = &XiMinMap;
             } else if (abspdg == Xizero.getPDG()){
                 XiMap = &XiZeroMap;
+            } else if (abspdg == Omegaminus.getPDG()){
+                isXi = false;
+                XiMap = &OmegaMap;
             } else continue;
             // found a Xi, kine cuts
             // if (XiCand.getpT() < minpT || XiCand.geteta() > maxEtaTrigger) continue; 
@@ -169,7 +194,11 @@ int main() {
             // do eff cut here:
             Double_t eff = 1;
             if(doEff){
-                eff *= hXiEff->GetBinContent(hXiEff->GetBin(XiCand.getpT()));
+                if(isXi) {
+                    eff *= hXiEff->GetBinContent(hXiEff->GetBin(XiCand.getpT()));
+                } else {
+                    eff *= hOmegaEff->GetBinContent(hOmegaEff->GetBin(XiCand.getpT()));
+                }
                 if(0.5 < abs(y)) eff*= 2*(1-abs(y)); // we already know y < ymax
             }
             // keep track of strangeness
@@ -199,9 +228,13 @@ int main() {
                 Int_t pdgAssoc = Assoc.getPDG();
                 // skip K0's
                 if(pdgAssoc == Kzeroshort.getPDG() || pdgAssoc == Kzerolong.getPDG()) continue;
-                //efficiency in case of Ximin
-                if(doEff && abs(pdgAssoc) == Ximinus.getPDG()) {
-                    eff *= hXiEff->GetBinContent(hXiEff->GetBin(Assoc.getpT()));
+                //efficiency in case of Ximin or Omega
+                if(doEff) {
+                    if (abs(pdgAssoc) == Ximinus.getPDG()){
+                        eff *= hXiEff->GetBinContent(hXiEff->GetBin(Assoc.getpT()));
+                    } else if (abs(pdgAssoc) == Omegaminus.getPDG()) {
+                        eff *= hOmegaEff->GetBinContent(hOmegaEff->GetBin(Assoc.getpT()));
+                    } else continue;
                     if(0.5 < abs(y2)) eff*= 2*(1-abs(y2)); // we already know y < ymax
                 }
                 Double_t dphi = DeltaPhi(XiCand.getphi(), Assoc.getphi());
@@ -254,9 +287,46 @@ int main() {
         Double_t nSS = bla.second.nSS;
         Double_t bincontent = nOS - nSS;
         Double_t error = sqrt(nOS + nSS);
+        // perhaps error should be sqrt(2*nSS+nOS-nSS)
 
         binnr = hXiMinRatio->Fill(binname, bincontent);
         hXiMinRatio->SetBinError(binnr, error);
+    }
+
+    // quickly do Omega, FIXME
+    TH1D* hOmegaRatio = (TH1D*) hTempRatio->Clone();
+    hOmegaRatio->SetName("hOmeganRatio");
+    hOmegaRatio->SetTitle("test");
+    for(auto bla : OmegaMap){
+        TH1D* OS = bla.second.hOS;
+        TH1D* SS = bla.second.hSS;
+        // scale with expected N events before resetting sumw2
+        if(doEff){
+            OS->Scale(100);
+            SS->Scale(100);
+        }
+        // reset errors to be equal to sqrt(N), needed when filling with weights due to efficiency
+        OS->GetSumw2()->Set(0);
+        OS->Sumw2();
+        SS->GetSumw2()->Set(0);
+        SS->Sumw2();
+
+        // TODO: make OS - SS plot (perhaps also compute integral?)
+        TH1D* hSignal = (TH1D*) hTempDPhi->Clone();
+        TString name = OS->GetName();
+        hSignal->SetName(name + "_subtracted");
+        hSignal->Add(OS, SS, 1, -1);
+
+        // make ratio plot
+        TString binname = StrangeHadronPDGMap.at(bla.first)->getAntiParticle()->getLatex();
+        Double_t nOS = bla.second.nOS;
+        Double_t nSS = bla.second.nSS;
+        Double_t bincontent = nOS - nSS;
+        Double_t error = sqrt(nOS + nSS);
+        // perhaps error should be sqrt(2*nSS+nOS-nSS)
+
+        binnr = hOmegaRatio->Fill(binname, bincontent);
+        hOmegaRatio->SetBinError(binnr, error);
     }
 
     outputfile->Write();
