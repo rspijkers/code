@@ -4,3 +4,9 @@
 ssbar_correlations
 **/lib/
 **/src/*_cpp.d
+
+# O2 dir ignores
+/O2/core_dump*
+/O2/log_*
+/O2/AnalysisResult*.root
+/O2/imgui.ini
