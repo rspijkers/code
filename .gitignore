@@ -1,9 +1,16 @@
+# general ignores
 /output/
 .vscode/
 /__pycache__/
 ssbar_correlations
 **/lib/
 **/src/*_cpp.d
+
+pythia_example/pythia_example
+pythia_example/test.root
+
+CustomROOTClass/test
+CustomROOTClass/testoutput.root
 
 # O2 dir ignores
 /O2/core_dump*
