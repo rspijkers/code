@@ -1,0 +1,5 @@
+$HOME/alice/data/LHC21k6_sample/AO2D-LHC21k6-1.root
+$HOME/alice/data/LHC21k6_sample/AO2D-LHC21k6-2.root
+$HOME/alice/data/LHC21k6_sample/AO2D-LHC21k6-3.root
+$HOME/alice/data/LHC21k6_sample/AO2D-LHC21k6-4.root
+$HOME/alice/data/LHC21k6_sample/AO2D-LHC21k6-5.root

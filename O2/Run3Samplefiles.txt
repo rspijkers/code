@@ -1,0 +1,1 @@
+$HOME/alice/data/LHC22o_sample/AO2D.root
