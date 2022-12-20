@@ -28,6 +28,7 @@ TH1D makeEfficiency(const char* filepath, Double_t BR = 1){
     std::copy(_Efficiency.begin(), _Efficiency.end(), Efficiency);
     TH1D hEfficiency = TH1D("hXiEff", "Efficiency for Xi", nbins - 1, BinEdges); 
     for(int i = 0; i < nbins; i++) hEfficiency.SetBinContent(i+1, BR*Efficiency[i]);
+    // TODO: handle under- and overflow: underflow is 0 probably good, but overflow > 0.
     return hEfficiency;
 }
 
@@ -78,12 +79,12 @@ int main() {
     // std::copy(_XiEff.begin(), _XiEff.end(), XiEff);
     // TH1D* hXiEff = new TH1D("hXiEff", "Efficiency for Xi", effbins - 1, XiBinEdges); 
     // for(int i = 0; i < effbins; i++) hXiEff->SetBinContent(i+1, 0.64*XiEff[i]); // 64% is the BR for Lambda to p + pion
-    // // TODO: handle under- and overflow: underflow is 0 probably good, but overflow > 0.
 
+    // TODO setnames
     TH1D hXiEffobj = makeEfficiency("efficiencies/XiMin.csv", 0.64);
     TH1D* hXiEff = &hXiEffobj;
 
-    TH1D hOmegaEffobj = makeEfficiency("efficiencies/XiMin.csv", 0.68*0.64); //Omega -> Lambda K- ~ 68%
+    TH1D hOmegaEffobj = makeEfficiency("efficiencies/Omegamin.csv", 0.68*0.64); //Omega -> Lambda K- ~ 68%
     TH1D* hOmegaEff = &hOmegaEffobj;
 
     // Make vector with all the strange hadrons

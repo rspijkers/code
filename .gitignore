@@ -17,3 +17,5 @@ CustomROOTClass/testoutput.root
 /O2/log_*
 /O2/AnalysisResult*.root
 /O2/imgui.ini
+/O2/test.json
+/O2/dpl-config.json

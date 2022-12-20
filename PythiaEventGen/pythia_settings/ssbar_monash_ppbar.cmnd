@@ -42,5 +42,3 @@ ParticleDecays:tau0Max = 0.01          ! tau0Max of 0.01 will stop all weak deca
 
 Beams:idA = 2212        ! beam 1 proton
 Beams:idB = -2212       ! beam 2 antiproton
-
-! TODO: add Nevents as setting here? 

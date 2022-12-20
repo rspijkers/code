@@ -3,6 +3,7 @@
 
 #include <array> // stl array allows for iteration over its elements
 #include <unordered_map>
+#include "TDataType.h"
 
 // container for all info regarding a specific hadron, including it the info on its antiparticle
 class Hadron {
