@@ -1,17 +1,4 @@
 {
-    "internal-dpl-clock": "",
-    "internal-dpl-aod-reader": {
-        "time-limit": "0",
-        "orbit-offset-enumeration": "0",
-        "orbit-multiplier-enumeration": "0",
-        "start-value-enumeration": "0",
-        "end-value-enumeration": "-1",
-        "step-value-enumeration": "1", 
-        "aod-file": "@run3MCfiles.txt"
-    },
-    "internal-dpl-injected-dummy-sink": "",
-    "internal-dpl-aod-spawner": "",
-    "internal-dpl-aod-index-builder": "",
     "timestamp-task": {
         "verbose": "false",
         "rct-path": "RCT\/Info\/RunInformation",
@@ -26,10 +13,33 @@
         "grpmagPath": "GLO\/Config\/GRPMagField",
         "mVtxPath": "GLO\/Calib\/MeanVertex",
         "minPropagationDistance": "83.0999985",
-        "processStandard": "true",
-        "processCovariance": "false"
+        "processStandard": "false",
+        "processCovariance": "true"
     },
     "bc-selection-task": {
+        "processRun2": "false",
+        "processRun3": "true"
+    },
+    "singlestrange-builder": {
+        "createV0CovMats": "-1",
+        "d_UseAutodetectMode": "true",
+        "mincrossedrows": "70",
+        "dcanegtopv": "0.1",
+        "dcapostopv": "0.1",
+        "v0cospa": "0.995",
+        "dcav0dau": "1",
+        "v0radius": "0.9",
+        "tpcrefit": "0",
+        "d_bz": "-999",
+        "d_UseAbsDCA": "true",
+        "d_UseWeightedPCA": "false",
+        "useMatCorrType": "0",
+        "rejDiffCollTracks": "0",
+        "ccdb-url": "http:\/\/alice-ccdb.cern.ch",
+        "grpPath": "GLO\/GRP\/GRP",
+        "grpmagPath": "GLO\/Config\/GRPMagField",
+        "lutPath": "GLO\/Param\/MatLUT",
+        "geoPath": "GLO\/Config\/GeometryAligned",
         "processRun2": "false",
         "processRun3": "true"
     },
@@ -71,7 +81,6 @@
         "processRun2": "false",
         "processRun3": "true"
     },
-    "lambdakzero-initializer": "",
     "lambdakzero-particle-count-mc": {
         "rapidityMCcut": "0.5",
         "event_sel8_selection": "true",
@@ -96,6 +105,29 @@
         "pid-tr": "-1",
         "pid-he": "-1",
         "pid-al": "-1"
+    },
+    "multistrange-builder": {
+        "d_UseAutodetectMode": "true",
+        "createCascCovMats": "-1",
+        "mincrossedrows": "70",
+        "tpcrefit": "0",
+        "dcabachtopv": "0.05",
+        "cascradius": "0.9",
+        "casccospa": "0.95",
+        "dcacascdau": "1",
+        "lambdaMassWindow": "0.01",
+        "d_bz": "-999",
+        "d_UseAbsDCA": "true",
+        "d_UseWeightedPCA": "false",
+        "useMatCorrType": "0",
+        "rejDiffCollTracks": "0",
+        "ccdb-url": "http:\/\/alice-ccdb.cern.ch",
+        "grpPath": "GLO\/GRP\/GRP",
+        "grpmagPath": "GLO\/Config\/GRPMagField",
+        "lutPath": "GLO\/Param\/MatLUT",
+        "geoPath": "GLO\/Config\/GeometryAligned",
+        "processRun2": "false",
+        "processRun3": "true"
     },
     "cascade-builder": {
         "d_bz": "-999",
@@ -124,7 +156,14 @@
         "processDoNotBuildLabels": "true",
         "processBuildLabels": "false"
     },
-    "cascade-initializer": "",
+    "singlestrange-label-builder": {
+        "processDoNotBuildLabels": "true",
+        "processBuildV0Labels": "false"
+    },
+    "multistrange-label-builder": {
+        "processDoNotBuildLabels": "true",
+        "processBuildCascadeLabels": "false"
+    },
     "lambdakzero-analysis-mc": {
         "dca-binning": {
             "values": [
@@ -182,7 +221,6 @@
         "processRun3": "true",
         "processRun2": "false"
     },
-    "lambdakzero-qa": "",
     "cascade-label-builder": {
         "processDoNotBuildLabels": "true",
         "processBuildLabels": "false"
@@ -221,7 +259,5 @@
     },
     "cascade-qa-m-c": {
         "assocMC": "true"
-    },
-    "internal-dpl-aod-global-analysis-file-sink": "",
-    "internal-dpl-aod-writer": ""
+    }
 }
