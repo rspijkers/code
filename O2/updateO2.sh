@@ -22,7 +22,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Redirect stdout and stderr to log file
-exec > $LOGFILE
+exec > "$EXECDIR/$LOGFILE"
 exec 2>&1
 # Build
 alienv setenv O2Physics/latest ninja/latest -c ninja install $EXECUTABLE
