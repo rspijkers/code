@@ -32,11 +32,11 @@ FILELIST="@Run3Samplefiles.txt"
 CONFIG="-b --configuration json://ssbarconfig.json" # -b means no debug gui
 
 # execute the entire workflow
-o2-analysis-timestamp $CONFIG | o2-analysis-track-propagation $CONFIG | o2-analysis-event-selection $CONFIG | o2-analysis-multiplicity-table $CONFIG | o2-analysis-pid-tpc $CONFIG | o2-analysis-lf-lambdakzerobuilder $CONFIG | o2-analysis-lf-cascadebuilder $CONFIG | o2-analysis-lf-strangecorrelations $CONFIG --aod-file @Run3Samplefiles.txt > log_o2.txt
+o2-analysis-collision-converter $CONFIG | o2-analysis-timestamp $CONFIG | o2-analysis-track-propagation $CONFIG | o2-analysis-event-selection $CONFIG | o2-analysis-multiplicity-table $CONFIG | o2-analysis-pid-tpc $CONFIG | o2-analysis-lf-lambdakzerobuilder $CONFIG | o2-analysis-lf-cascadebuilder $CONFIG | o2-analysis-lf-strangecorrelations $CONFIG --aod-file @Run3Samplefiles.txt > log_o2.txt
+
+# o2-analysis-collision-converter $CONFIG | o2-analysis-timestamp $CONFIG | o2-analysis-track-propagation $CONFIG | o2-analysis-event-selection $CONFIG | o2-analysis-multiplicity-table $CONFIG | o2-analysis-pid-tpc $CONFIG | o2-analysis-lf-singlestrangebuilder $CONFIG | o2-analysis-lf-multistrangebuilder $CONFIG | o2-analysis-lf-strangecorrelations $CONFIG > log_o2.txt
 
 # check the exit code, if it's non-zero then let the user know.
 if [ $? -ne 0 ]; then
     echo "The O2 workflow exited with non-zero exit code, something probably went wrong! Please check the log: log_o2.txt."
 fi
-
-# o2-analysis-timestamp $CONFIG | o2-analysis-track-propagation $CONFIG | o2-analysis-event-selection $CONFIG | o2-analysis-multiplicity-table $CONFIG | o2-analysis-pid-tpc $CONFIG | o2-analysis-lf-singlestrangebuilder $CONFIG | o2-analysis-lf-multistrangebuilder $CONFIG | o2-analysis-lf-strangecorrelations $CONFIG > log_o2.txt
