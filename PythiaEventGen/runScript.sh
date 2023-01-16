@@ -13,7 +13,11 @@ OUTPUTDIR="Monash_pp_100M_14TeV"
 [ ! -d "$OUTPUTPATH/$OUTPUTDIR" ] && mkdir -p "$OUTPUTPATH/$OUTPUTDIR" && echo "outputdir created"
 
 # make pythia script
-eval "alienv setenv $ENVIRONMENT -c make ssbar_correlations -B"
+alienv setenv $ENVIRONMENT -c make ssbar_correlations -B
+if [ $? -ne 0 ]; then
+    echo "Compilation was not succesful, aborting..."
+    exit
+fi
 
 # submit the jobs
 for i in {1..10}

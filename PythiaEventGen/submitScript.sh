@@ -3,7 +3,7 @@
 # This script is passed to the batch queue on Nikhef with the qsub command, it aims to run a pythia script
 
 source /cvmfs/alice.cern.ch/etc/login.sh
-cd /user/rspijker/code/PythiaEventGen # Nikhef
+cd /project/alice/users/rspijker/code/PythiaEventGen # Nikhef
 
 ENVIRONMENT="VO_ALICE@pythia::v8304-23,VO_ALICE@ROOT::v6-26-10-alice5-2" # Nikhef
 # ENVIRONMENT="O2/latest,pythia/latest" # Home
