@@ -6,7 +6,8 @@
 // After making the executable, it can be run by `./ssbar_correlations "outputfile.root" runNumber`
 // `runNumber` is an optional parameter that allows for easier parallel generating, This way you can have
 // uniquely identified events across multiple instances of this script. Handy if you want to run on a grid
-// or something similar. 
+// or something similar. It is assumed that runNumber starts from 1, entering runNumber=0 will lead to 
+// negative eventId's.
 //
 // Author: Rik Spijkers (rik.spijkers@nikhef.nl)
 
@@ -79,7 +80,7 @@ int main(int argc, char** argv)
 	// PYTHIA SETTINGS
 	pythia.readFile("pythia_settings/ssbar_monash.cmnd");
 	Int_t nEvents = pythia.mode("Main:numberOfEvents");
-	const Int_t eventIdOffset = nEvents*runNr;
+	const Int_t eventIdOffset = nEvents*(runNr-1);
 
 	Int_t processid = getpid();
 	string seedstr = "Random:seed = " + std::to_string((time(0) + processid)%900000000);
