@@ -1,3 +1,15 @@
+// This is a PYTHIA script that generates pp events and saves them to a root file. 
+// It is taylored to save strange hadrons so we can analyze correlations between them after generating.
+// This script should be shipped with a makefile, custom event and track classes, and PYTHIA config files.
+//
+// Usage:
+// After making the executable, it can be run by `./ssbar_correlations "outputfile.root" runNumber`
+// `runNumber` is an optional parameter that allows for easier parallel generating, This way you can have
+// uniquely identified events across multiple instances of this script. Handy if you want to run on a grid
+// or something similar. 
+//
+// Author: Rik Spijkers (rik.spijkers@nikhef.nl)
+
 // std
 #include <iostream>
 #include <cmath> // needed for modulo in deltaPhi calc & abs of doubles
@@ -7,9 +19,7 @@
 // ROOT/pythia
 #include "Pythia8/Pythia.h"
 #include "TFile.h"
-#include "TH1F.h"
-#include "TH2F.h"
-#include "TH1I.h"
+#include "TH3.h"
 #include "TTree.h"
 // custom
 #include "helperfunctions.h"
@@ -61,8 +71,7 @@ int main(int argc, char** argv)
 	// TODO: get kinematic options from json config file?
 
 	// Analysis settings
-	const Bool_t	doUnderlyingEvent = false;
-	const Double_t 	pTmin = 0.15;
+	const Double_t 	pTmin = 0;
 	const Double_t 	maxEta = 4.;
 
 	Pythia pythia;
@@ -86,18 +95,14 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	// TODO structure histo's into QA, UE, and correlations?
-	// maybe do this by initializing the directories before this, and cd() to the right directory in between the histo declarations?
-
 	// Output histo's
-  	TH2D *hEtaPt = new TH2D("hEtaPt","p_{T} vs #eta for all particles;#eta;p_{T} (GeV/c)", 40, -4., 4., 50, 0, 10);
-	TH1D *hPDG = new TH1D("hPDG", "PDG code for trigger strange hadrons", 12000, -6000, 6000); 
-	TH1D *hPDGAssoc = new TH1D("hPDGAssoc", "PDG code for associated strange hadrons", 12000, -6000, 6000); // use Double_t to get around maximum bin content of Int_t
-	TH1I *hCandidatesPerEvent = new TH1I("hCandidatesPerEvent", "Number of candidates per event", 100, 0, 100);
+	// Use THnSparse with PDG, pT, eta, since most bins are empty due to the PDG codes
+	TH3D* hSpectra = new TH3D("hSpectra","PDG, p_{T}, #eta for all non-exotic particles (|PDG| < 4000);PDG;p_{T} (GeV/c);#eta", 8000, -4000, 4000, 100, 0, 20, 100, -maxEta, maxEta);
 
-	Int_t partpdg;
-	Double_t partpT;
-	Double_t parteta;
+	Int_t pdg;
+	Double_t pT;
+	Double_t eta;
+	Double_t phi;
 	Double_t pTssbar;
 	
 	SmallEvent *event = new SmallEvent();
@@ -117,39 +122,36 @@ int main(int argc, char** argv)
 		for(int iPart = 0; iPart < nPart; iPart++) { // particle loop
       		const Particle &part = pythia.event[iPart];
 
-			partpdg = part.id();
+			pdg = part.id();
 			// in case of ssbar, save the highest pT. in case only one s(bar), pT always > -1 
-			if(part.status()==-23 && abs(partpdg)==3 && part.pT() > pTssbar) pTssbar = part.pT();
+			if(part.status()==-23 && abs(pdg)==3 && part.pT() > pTssbar) pTssbar = part.pT();
 			
 			if(!part.isFinal()) continue; // final state particle 
 			nFinalState++;
-			partpT = part.pT();
-			parteta = part.eta();
+			pT = part.pT();
+			eta = part.eta();
 
-			if(!IsStrange(partpdg) || partpT < pTmin || abs(parteta) > maxEta) continue; // kine cuts & strangeness check
-			// we have identified a strange trigger that satisfies the kinematic requirements
-			// If we get this far with the trigger particle, we will correlate it with other strange hadrons
-			// In order to be able to normalize, we need to keep track of how many triggers we have for each hadron
+			// Fill the UE histo
+			hSpectra->Fill((Double_t) pdg, pT, eta);
 
-			Double_t partphi = part.phi();
+			if(!IsStrange(pdg) || pT < pTmin || abs(eta) > maxEta) continue; // kine cuts & strangeness check
 
-			track.setPDG(partpdg);
-			track.setpT(partpT);
-			track.setEta(parteta);
-			track.setPhi(partphi);
+			phi = part.phi();
+
+			track.setPDG(pdg);
+			track.setpT(pT);
+			track.setEta(eta);
+			track.setPhi(phi);
 			event->addCandidate(track);
 			track.Clear();
 
 			candidatesPerEvent++;
-
-			hEtaPt->Fill(parteta,partpT);
-			hPDG->Fill((Double_t) partpdg);
 		} // end track loop
 		event->setEventId(eventIdOffset+iEvent);
 		event->setNtracks(nFinalState);
+		event->setpTssbar(pTssbar);
 		tree->Fill();
 		event->Clear();
-		hCandidatesPerEvent->Fill(candidatesPerEvent);
 	} // end event loop
 	outFile->Write();
 	cout << "Output written to file " << outFile->GetName() << endl;

@@ -19,7 +19,7 @@ SOURCES = $(FILES:%.cpp=$(SRC)/%.cpp)			# prepend source dir to filenames.
 LINKDEF = linkdef.h# 					# linkdef file containing pragma statements concerning which classes to include in the dictionary
 DICT=EventDict.cpp#					# Name of the dictionary to be created, can pretty much be anything
 
-# Only do this if test.cpp exists. Executing `make test` targets this specifically. Explanation of the recipe below.
+# Only do this if test.cpp exists. Executing `make ssbar_correlations` targets this specifically. Explanation of the recipe below.
 # remove all the '@' at the start of the lines for debugging
 ssbar_correlations: ssbar_correlations.cpp
 	@echo -n Making dictionary with rootcling...\  

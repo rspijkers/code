@@ -24,8 +24,8 @@ class SmallTrack {
         // getters
         Int_t getPDG() const {return pdg;}
         Double_t getpT() const {return pT;}
-        Double_t geteta() const {return eta;}
-        Double_t getphi() const {return phi;}
+        Double_t getEta() const {return eta;}
+        Double_t getPhi() const {return phi;}
 
         ClassDef(SmallTrack,1); 
 };

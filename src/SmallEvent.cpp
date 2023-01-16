@@ -4,7 +4,7 @@
 SmallEvent::SmallEvent(){
     eventId = 0;
     Ntracks = 0;
-    Tracks = {};
+	pTssbar = 0;
     Candidates = {};
 }
 
@@ -12,7 +12,7 @@ SmallEvent::SmallEvent(){
 void SmallEvent::Clear(){
 	eventId = 0;
 	Ntracks = 0;
-	Tracks.clear();
+	pTssbar = 0;
 	Candidates.clear();
 }
 

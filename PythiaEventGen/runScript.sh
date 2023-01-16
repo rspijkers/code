@@ -1,17 +1,16 @@
 #!/bin/bash
 
 # This script steers a pythia simulation on stbc
-cd /user/rspijker/code/PythiaEventGen # Nikhef
+cd /project/alice/users/rspijker/code/PythiaEventGen # Nikhef
 
-ENVIRONMENT="VO_ALICE@pythia::v8304-9,VO_ALICE@ROOT::v6-24-06-18" # Nikhef
+ENVIRONMENT="VO_ALICE@pythia::v8304-23,VO_ALICE@ROOT::v6-26-10-alice5-2" # Nikhef
 # ENVIRONMENT="O2/latest,pythia/latest" # Home
 echo $ENVIRONMENT
 
 # define outputdir, check to see if it exists, if not then mkdir it
-OUTPUTPATH="/data/alice/rspijker/output"
-OUTPUTDIR="Monash_pp_5M_14TeV"
+OUTPUTPATH="/dcache/alice/rspijker/ModelStudyJan"
+OUTPUTDIR="Monash_pp_100M_14TeV"
 [ ! -d "$OUTPUTPATH/$OUTPUTDIR" ] && mkdir -p "$OUTPUTPATH/$OUTPUTDIR" && echo "outputdir created"
-
 
 # make pythia script
 eval "alienv setenv $ENVIRONMENT -c make ssbar_correlations -B"

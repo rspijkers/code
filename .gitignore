@@ -5,17 +5,15 @@
 ssbar_correlations
 **/lib/
 **/src/*_cpp.d
+**.root
 
 pythia_example/pythia_example
-pythia_example/test.root
 
 CustomROOTClass/test
-CustomROOTClass/testoutput.root
 
 # O2 dir ignores
 /O2/core_dump*
 /O2/log_*
-/O2/AnalysisResult*.root
 /O2/imgui.ini
 /O2/test.json
 /O2/dpl-config.json
