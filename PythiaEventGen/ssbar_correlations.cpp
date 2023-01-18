@@ -72,8 +72,9 @@ int main(int argc, char** argv)
 	// TODO: get kinematic options from json config file?
 
 	// Analysis settings
+	const Bool_t	doOmegaTrigger = true; 
 	const Double_t 	pTmin = 0;
-	const Double_t 	maxEta = 4.;
+	const Double_t 	maxEta = 100.;
 
 	Pythia pythia;
 
@@ -116,6 +117,20 @@ int main(int argc, char** argv)
 		if(!pythia.next()) continue;
 
 		int nPart = pythia.event.size();
+
+		if(doOmegaTrigger){
+			bool trigger = false;
+			for (int iPart = 0; iPart < nPart; iPart++){
+				int abspdg = abs(pythia.event[iPart].id());
+				if (abspdg == 3334){ // Omega pdg = 3334
+					trigger = true;
+					break;
+				} 
+			}
+			if(!trigger) continue; // no trigger? go next!
+			// If we do have a trigger, proceed as normal. 
+		}
+
 		int candidatesPerEvent = 0;
 		int nFinalState = 0;
 		pTssbar = -1.;
