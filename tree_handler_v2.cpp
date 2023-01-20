@@ -33,6 +33,9 @@ TH1D makeEfficiency(const char* filepath, Double_t BR = 1){
 }
 
 int main() {
+
+    // make inputfiles an input argument
+
     gSystem->Load("lib/libEvent.so");
     // TH1::SetDefaultSumw2(); // make sure errors are propagated in histo'ss
     
@@ -43,7 +46,7 @@ int main() {
     // "/data/alice/rspijker/output/220926_SkandsMode2_pp_10M_14TeV_minpT0p15/"
 
     TChain* chain = new TChain("tree");
-    chain->Add("PythiaEventGen/test.root");
+    chain->Add("~/alice/data/ModelStudyJan/Monash_pp_100M_14TeV/*.root");
 
     // Create list of files 
     TObjArray* fileElements = chain->GetListOfFiles(); // not actually a list of files, hence the TChainElement fuckery
@@ -63,23 +66,6 @@ int main() {
 
     TFile* outputfile = new TFile("treev2eff.root", "RECREATE");
 
-    struct XiStruct{
-        TH1D* hSS;
-        TH1D* hOS;
-        Double_t nSS = 0;
-        Double_t nOS = 0; 
-    };
-
-    // make efficiency
-    // std::vector<Double_t> _XiBinEdges, _XiEff;
-    // CSVtoXYArrays("efficiencies/XiMin.csv", &_XiBinEdges, &_XiEff);
-    // const Int_t effbins = _XiEff.size();
-    // Double_t XiBinEdges[effbins], XiEff[effbins]; // one more entry for edges: also the upper edge of last bin
-    // std::copy(_XiBinEdges.begin(), _XiBinEdges.end(), XiBinEdges);
-    // std::copy(_XiEff.begin(), _XiEff.end(), XiEff);
-    // TH1D* hXiEff = new TH1D("hXiEff", "Efficiency for Xi", effbins - 1, XiBinEdges); 
-    // for(int i = 0; i < effbins; i++) hXiEff->SetBinContent(i+1, 0.64*XiEff[i]); // 64% is the BR for Lambda to p + pion
-
     // TODO setnames
     TH1D hXiEffobj = makeEfficiency("efficiencies/XiMin.csv", 0.64);
     TH1D* hXiEff = &hXiEffobj;
@@ -91,6 +77,14 @@ int main() {
     std::vector<Hadron*> posStrangeHadrons;
     for(Hadron* h: StrangeHadrons) if(h->getStrangeness() > 0) posStrangeHadrons.push_back(h);
     Int_t nbins = posStrangeHadrons.size();
+
+    // Make analysis structures that hold the relevant data
+    struct XiStruct{
+        TH1D* hSS;
+        TH1D* hOS;
+        Double_t nSS = 0;
+        Double_t nOS = 0; 
+    };
 
     std::map<Int_t, XiStruct> XiMinMap; 
     std::map<Int_t, XiStruct> XiZeroMap; 
@@ -110,6 +104,7 @@ int main() {
         Int_t pdg = assoc->getPDG();
         XiStruct XiMin;
         XiStruct XiZero;
+        XiStruct Omega;
 
         TH1D* hSS = (TH1D*) hTempDPhi->Clone();
         hSS->SetName("Xi-"+assoc->getName()+"Dphi");
@@ -133,9 +128,6 @@ int main() {
         XiZero.hOS = hOS1;
         XiZeroMap[pdg] = XiZero;
 
-        // do Omega quickly here
-        XiStruct Omega;
-
         TH1D* hSS2 = (TH1D*) hTempDPhi->Clone();
         hSS2->SetName("Omega-"+assoc->getName()+"Dphi");
         hSS2->SetTitle("#Omega^{-}(#Omega^{+}) - " + latex + "(" + antilatex + ") correlations");
@@ -149,12 +141,12 @@ int main() {
     }
 
     // Analysis options
-    const Bool_t doEff = true;
-    const Double_t minpT = 1.20;
-    const Double_t maxEtaTrigger = 2.0;
-    const Double_t maxEtaAssoc = 3.0;
-    const Double_t maxRapidity = 1.0;
-    const Bool_t BkgScaling =  false; // do bkg scaling, needed to account for asymmetry in pp collisions
+    const Bool_t doEff = false;
+    const Double_t minpT = 1.2;
+    const Double_t maxEtaTrigger = 2.;
+    const Double_t maxEtaAssoc = 2.;
+    const Double_t maxRapidity = 2.;
+    // TODO: const Bool_t BkgScaling =  false; // do bkg scaling, needed to account for asymmetry in pp collisions
     std::set<Int_t> uniqueTriggerPDGs, uniqueAssocPDGs; // to keep track of possible PDG
 
     // Set branch address, so we can use the variables when we GetEntry()
@@ -189,8 +181,10 @@ int main() {
                 XiMap = &OmegaMap;
             } else continue;
             // found a Xi, kine cuts
+
+            // Do either rapidity or pseudorapidity cut ( + pt cut)
             // if (XiCand.getpT() < minpT || XiCand.geteta() > maxEtaTrigger) continue; 
-            Double_t y = rapidityFromEta(XiCand.geteta(), XiCand.getpT(), 1.320);
+            Double_t y = rapidityFromEta(XiCand.getEta(), XiCand.getpT(), 1.320);
             if (XiCand.getpT() < minpT || abs(y) > maxRapidity) continue; // Xi's are roughly 1.320 GeV
             // do eff cut here:
             Double_t eff = 1;
@@ -223,7 +217,7 @@ int main() {
                     continue;
                 }
 
-                Double_t y2 = rapidityFromEta(Assoc.geteta(), Assoc.getpT(), mass);
+                Double_t y2 = rapidityFromEta(Assoc.getEta(), Assoc.getpT(), mass);
                 if(Assoc.getpT() < minpT || abs(y2) > maxRapidity) continue; 
 
                 Int_t pdgAssoc = Assoc.getPDG();
@@ -238,7 +232,7 @@ int main() {
                     } else continue;
                     if(0.5 < abs(y2)) eff*= 2*(1-abs(y2)); // we already know y < ymax
                 }
-                Double_t dphi = DeltaPhi(XiCand.getphi(), Assoc.getphi());
+                Double_t dphi = DeltaPhi(XiCand.getPhi(), Assoc.getPhi());
                 try{
                     fillXi = &XiMap->at(pdgAssoc);
                 } catch (std::out_of_range){
@@ -270,12 +264,14 @@ int main() {
             OS->Scale(100);
             SS->Scale(100);
         }
+
         // reset errors to be equal to sqrt(N), needed when filling with weights due to efficiency
+        // doesn't change anything when running without efficiency
         OS->GetSumw2()->Set(0);
         OS->Sumw2();
         SS->GetSumw2()->Set(0);
         SS->Sumw2();
-
+        
         // TODO: make OS - SS plot (perhaps also compute integral?)
         TH1D* hSignal = (TH1D*) hTempDPhi->Clone();
         TString name = OS->GetName();
