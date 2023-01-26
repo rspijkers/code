@@ -74,7 +74,7 @@ int main(int argc, char** argv)
 	// Analysis settings
 	const Bool_t	doOmegaTrigger = true; 
 	const Double_t 	pTmin = 0;
-	const Double_t 	maxEta = 100.;
+	const Double_t 	maxEta = 4.;
 
 	Pythia pythia;
 
