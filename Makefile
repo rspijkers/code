@@ -7,7 +7,8 @@ CXXFLAGS:=$(shell root-config --cflags) $(shell root-config --libs)
 ##### This is needed if you want to fill a Tree with a custom Event class for instance
 
 # make sure there is no whitespace after paths
-# CPATH=/user/rspijker/code# 			# NIKHEF STBC
+# TODO: automatically set CPATH with `hostname`
+# CPATH="~/project/code"# 			# NIKHEF STBC
 CPATH=/home/rik/cernbox/PhD/code# 	# path to code repository
 LIB=$(CPATH)/lib#
 SRC=$(CPATH)/src#

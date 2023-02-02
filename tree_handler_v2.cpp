@@ -5,7 +5,9 @@
 #include <map>
 // ROOT
 #include "TFile.h"
-#include "TH1D.h"
+#include "TH1.h"
+#include "TH2.h"
+#include "TH3.h"
 #include "TString.h"
 #include "TTree.h"
 #include "TChain.h"
@@ -15,6 +17,8 @@
 #include "include/hadrons.h"
 #include "include/helperfunctions.h"
 #include "include/SmallEvent.h" // also includes SmallTrack 
+
+using std::cout; using std::endl;
 
 // take a csv file with the lower bin edges and efficiency values. Note that the last entry should be the upper bin edge of the last bin. 
 TH1D makeEfficiency(const char* filepath, Double_t BR = 1){
@@ -64,7 +68,28 @@ int main() {
         return 1;
     }
 
+    // outputfile structure
     TFile* outputfile = new TFile("treev2eff.root", "RECREATE");
+    TDirectory* XiMinusdir = outputfile->mkdir(Ximinus.getName());
+    TDirectory* XiZerodir = outputfile->mkdir(Xizero.getName());
+    TDirectory* Omegadir = outputfile->mkdir(Omegaminus.getName());
+    TDirectory* ratiodir = outputfile->mkdir("ratios");
+    TDirectory* XiMinusSubdir = outputfile->mkdir(Ximinus.getName()+"/subtracted");
+    TDirectory* XiZeroSubdir = outputfile->mkdir(Xizero.getName()+"/subtracted");
+    TDirectory* OmegaSubdir = outputfile->mkdir(Omegaminus.getName()+"/subtracted");
+
+    // Do QA from spectra histo (PDG, pT, eta):
+    TH3D* hSpectra = (TH3D*) fileList[0]->Get<TH3D>("hSpectra")->Clone();
+    for(Int_t i = 1; i < nfiles; i++){
+        TH3D* h_ = fileList[i]->Get<TH3D>("hSpectra");
+        if(!h_){ // check h_ is not nullpointer
+            std::cout << "histogram (or file) is nullptr, something went wrong" << std::endl;
+            return 1;
+        } 
+        hSpectra->Add(h_);
+    }
+    TH1D* hPDG = hSpectra->ProjectionX();
+    hPDG->SetName("hPDG");
 
     // TODO setnames
     TH1D hXiEffobj = makeEfficiency("efficiencies/XiMin.csv", 0.64);
@@ -79,65 +104,57 @@ int main() {
     Int_t nbins = posStrangeHadrons.size();
 
     // Make analysis structures that hold the relevant data
-    struct XiStruct{
-        TH1D* hSS;
-        TH1D* hOS;
+    struct DataStruct{
+        TH2D* hSS;
+        TH2D* hOS;
         Double_t nSS = 0;
         Double_t nOS = 0; 
     };
+    using assocmap = std::map<Int_t, DataStruct>;
+    assocmap XiMinMap; 
+    assocmap XiZeroMap; 
+    assocmap OmegaMap;
+    
+    // array of interesting triggers
+    std::map<Hadron*, assocmap> triggermap = {{&Ximinus, XiMinMap}, {&Xizero, XiZeroMap}, {&Omegaminus, OmegaMap}};
 
-    std::map<Int_t, XiStruct> XiMinMap; 
-    std::map<Int_t, XiStruct> XiZeroMap; 
-    std::map<Int_t, XiStruct> OmegaMap;
-    TH1D* hTempDPhi = new TH1D("hTempDPhi", "Overwrite this title", 32, -0.5*PI, 1.5*PI); // 32 bins is easy to rebin
-    TH1D* hTempRatio = new TH1D("hTempRatio", "template", nbins, 0, nbins); 
+    Double_t multiplicityBinning[7] = {0, 50, 200, 350, 500, 650, 1000};
+    TH2D* hTempDPhi = new TH2D("hTempDPhi", "Overwrite this title;#Delta#varphi;Ntracks", 32, -0.5*PI, 1.5*PI, 6, multiplicityBinning); // 32 bins is easy to rebin
+    // TH2D* hTempRatio = new TH2D("hTempRatio", "Overwrite this title;Associate hadron;Multiplicity", nbins, 0, nbins, 6, multiplicityBinning); 
+    TH1D* hTempRatio = new TH1D("hTempRatio", "Overwrite this title;Associate hadron;Ntracks", nbins, 0, nbins); 
     TAxis* ax = hTempRatio->GetXaxis();
     hTempRatio->SetXTitle("Associate hadron");
-    Int_t binnr = 0;
-    for(Hadron* assoc : posStrangeHadrons){
-        Hadron* antiassoc = assoc->getAntiParticle();
-        TString latex = assoc->getLatex();
-        TString antilatex = antiassoc->getLatex();
-        ax->SetBinLabel(binnr + 1, antilatex);
-        binnr++;
+    assocmap assocmapdummy; // needs to be defined before the loop, otherwise it won't survive the loop
+    for (auto& trig : triggermap){
+        Hadron* trigger = trig.first; 
+        Int_t binnr = 0;
+        outputfile->cd(trigger->getName());
+        DataStruct datastruct;
+        for(Hadron* assoc : posStrangeHadrons){
+            // names and titles
+            Hadron* antiassoc = assoc->getAntiParticle();
+            Hadron* antitrigger = trigger->getAntiParticle();
+            TString assoclatex = assoc->getLatex();
+            TString antiassoclatex = antiassoc->getLatex();
+            TString triglatex = trigger->getLatex();
+            TString antitriglatex = antitrigger->getLatex();
 
-        Int_t pdg = assoc->getPDG();
-        XiStruct XiMin;
-        XiStruct XiZero;
-        XiStruct Omega;
+            ax->SetBinLabel(binnr + 1, antiassoclatex);
+            binnr++;
+            Int_t pdg = assoc->getPDG();
 
-        TH1D* hSS = (TH1D*) hTempDPhi->Clone();
-        hSS->SetName("Xi-"+assoc->getName()+"Dphi");
-        hSS->SetTitle("#Xi^{-}(#Xi^{+}) - " + latex + "(" + antilatex + ") correlations");
-        TH1D* hOS = (TH1D*) hTempDPhi->Clone();
-        hOS->SetName("Xi-"+antiassoc->getName()+"Dphi");
-        hOS->SetTitle("#Xi^{-}(#Xi^{+}) - " + antilatex + "(" + latex + ") correlations");
+            TH2D* hSS = (TH2D*) hTempDPhi->Clone();
+            hSS->SetName(trigger->getName()+assoc->getName()+"Dphi");
+            hSS->SetTitle(triglatex + "(" + antitriglatex + ")" + assoclatex + "(" + antiassoclatex + ") correlations");
+            TH2D* hOS = (TH2D*) hTempDPhi->Clone();
+            hOS->SetName(trigger->getName()+antiassoc->getName()+"Dphi");
+            hOS->SetTitle(triglatex + "(" + antitriglatex + ")" + antiassoclatex + "(" + assoclatex + ") correlations");
 
-        XiMin.hSS = hSS;
-        XiMin.hOS = hOS;
-        XiMinMap[pdg] = XiMin;
-
-        TH1D* hSS1 = (TH1D*) hTempDPhi->Clone();
-        hSS1->SetName("Xi0"+assoc->getName()+"Dphi");
-        hSS1->SetTitle("#Xi^{0}(#bar{#Xi^{0}}) - " + latex + "(" + antilatex + ") correlations");
-        TH1D* hOS1 = (TH1D*) hTempDPhi->Clone();
-        hOS1->SetName("Xi0"+antiassoc->getName()+"Dphi");
-        hOS1->SetTitle("#Xi^{0}(#bar{#Xi^{0}}) - " + antilatex + "(" + latex + ") correlations");
-
-        XiZero.hSS = hSS1;
-        XiZero.hOS = hOS1;
-        XiZeroMap[pdg] = XiZero;
-
-        TH1D* hSS2 = (TH1D*) hTempDPhi->Clone();
-        hSS2->SetName("Omega-"+assoc->getName()+"Dphi");
-        hSS2->SetTitle("#Omega^{-}(#Omega^{+}) - " + latex + "(" + antilatex + ") correlations");
-        TH1D* hOS2 = (TH1D*) hTempDPhi->Clone();
-        hOS2->SetName("Omega-"+antiassoc->getName()+"Dphi");
-        hOS2->SetTitle("#Omega^{-}(#Omega^{+}) - " + antilatex + "(" + latex + ") correlations");
-
-        Omega.hSS = hSS2;
-        Omega.hOS = hOS2;
-        OmegaMap[pdg] = Omega;
+            datastruct.hSS = hSS;
+            datastruct.hOS = hOS;
+            assocmapdummy[pdg] = datastruct;
+        }
+        trig.second = assocmapdummy; // set the map
     }
 
     // Analysis options
@@ -157,36 +174,43 @@ int main() {
     SmallTrack XiCand;
     SmallTrack Assoc;
     std::vector<SmallTrack> cands = {};
-    XiStruct* fillXi;
-    std::map<Int_t, XiStruct>* XiMap;
+    DataStruct* fillXi;
+    std::map<Int_t, DataStruct>* XiMap;
+
+    // TODO: make nice, this is to debug
+    TH1I* hncands = new TH1I("hncands", "N strange particles per event", 100, 0, 100);
 
     const Long64_t nEvents = chain->GetEntries(); 
     for(Int_t iEvent = 0; iEvent < nEvents; iEvent++){
         chain->GetEntry(iEvent);
+        Int_t multiplicity = event->getNtracks();
         cands = event->getCandidates();
         Int_t nCands = cands.size();
+        hncands->Fill(nCands);
         for(Int_t i = 0; i < nCands; i++){
             XiCand = cands[i];
             Int_t pdg = XiCand.getPDG();
             Int_t abspdg = abs(pdg);
 
-            // look for Xi
-            Bool_t isXi = true; // ad hoc check for xi or omega
+            // ad hoc check for xi or omega
+            Bool_t isXi = true; 
             if(abspdg == Ximinus.getPDG()){
-                XiMap = &XiMinMap;
+                // XiMap = &XiMinMap;
+                XiMap = &triggermap[&Ximinus];
             } else if (abspdg == Xizero.getPDG()){
-                XiMap = &XiZeroMap;
+                // XiMap = &XiZeroMap;
+                XiMap = &triggermap[&Xizero];
             } else if (abspdg == Omegaminus.getPDG()){
                 isXi = false;
-                XiMap = &OmegaMap;
+                // XiMap = &OmegaMap;
+                XiMap = &triggermap[&Omegaminus];
             } else continue;
-            // found a Xi, kine cuts
 
-            // Do either rapidity or pseudorapidity cut ( + pt cut)
+            // Kine cuts: do either rapidity or pseudorapidity cut ( + pt cut)
             // if (XiCand.getpT() < minpT || XiCand.geteta() > maxEtaTrigger) continue; 
             Double_t y = rapidityFromEta(XiCand.getEta(), XiCand.getpT(), 1.320);
             if (XiCand.getpT() < minpT || abs(y) > maxRapidity) continue; // Xi's are roughly 1.320 GeV
-            // do eff cut here:
+            // do eff cut here (optional):
             Double_t eff = 1;
             if(doEff){
                 if(isXi) {
@@ -242,88 +266,81 @@ int main() {
                 }
                 // fill correct dphi hist and update yield.
                 if(SS >= 1){
-                    fillXi->hSS->Fill(dphi, eff);
+                    fillXi->hSS->Fill(dphi, multiplicity, eff);
                     fillXi->nSS++;
                 } else {
-                    fillXi->hOS->Fill(dphi, eff);
+                    fillXi->hOS->Fill(dphi, multiplicity, eff);
                     fillXi->nOS++;
                 }
+            } // 2nd cand loop
+        } // 1st cand loop
+    } // event loop
+
+    // do ratio plots here:
+    // Let's try to do it with a loop over the triggers
+    Int_t nMultiplicityBins = hTempDPhi->GetNbinsY();
+    cout << nMultiplicityBins << endl;
+    for(auto& trig : triggermap){
+        // Don't forget to handle the K0's
+        Hadron* trigger = trig.first;
+        outputfile->cd(trigger->getName()+"/subtracted");
+        TH1D* hRatio = (TH1D*) hTempRatio->Clone();
+        hRatio->SetName("h"+trigger->getName()+"_ratio");
+        hRatio->SetTitle("Correlations between " + trigger->getLatex() + " and assocates (number of pairs)");
+        hRatio->SetDirectory(ratiodir);
+        std::vector<TH1D*> vMultiplicityRatios;
+        for(Int_t i = 0; i < nMultiplicityBins; i++){
+            TString loweredge = std::to_string((int) multiplicityBinning[i]);
+            TString upperedge = std::to_string((int) multiplicityBinning[i+1]);
+            TH1D* h = (TH1D*) hTempRatio->Clone();
+            TString name = TString(loweredge+"-"+upperedge+" N_part");
+            h->SetName(name);
+            vMultiplicityRatios.push_back(h);
+        }
+        for(auto bla : trig.second){
+            TH2D* OS = bla.second.hOS;
+            TH2D* SS = bla.second.hSS;
+            // scale with expected N events before resetting sumw2
+            if(doEff){ // FIXME
+                OS->Scale(100);
+                SS->Scale(100);
+            }
+
+            // reset errors to be equal to sqrt(N), needed when filling with weights due to efficiency
+            // doesn't change anything when running without efficiency
+            OS->GetSumw2()->Set(0);
+            OS->Sumw2();
+            SS->GetSumw2()->Set(0);
+            SS->Sumw2();
+            
+            // TODO: make OS - SS plot (perhaps also compute integral?)
+            TH2D* hSignal = (TH2D*) hTempDPhi->Clone();
+            TString name = OS->GetName();
+            TString title = OS->GetTitle();
+            hSignal->SetName(name + "_subtracted");
+            hSignal->SetTitle(title + " (subtracted)");
+            hSignal->Add(OS, SS, 1, -1);
+
+            // make total ratio plot
+            TString binname = StrangeHadronPDGMap.at(bla.first)->getAntiParticle()->getLatex();
+            Double_t nOS = bla.second.nOS;
+            Double_t nSS = bla.second.nSS;
+            Double_t bincontent = nOS - nSS;
+            Double_t error = sqrt(nOS + nSS);
+            // perhaps error should be sqrt(2*nSS+nOS-nSS)
+
+            Int_t binnr = hRatio->Fill(binname, bincontent);
+            hRatio->SetBinError(binnr, error);
+
+            // So with this 2D signal histo, we can make ratioplots per multiplicitybin
+            for(Int_t ybin = 0; ybin < nMultiplicityBins; ybin++){
+                Double_t integral, error;
+                Int_t nxbins = hSignal->GetNbinsX();
+                integral = hSignal->IntegralAndError(0, nxbins, ybin, ybin+1, error);
+                binnr = vMultiplicityRatios[ybin]->Fill(binname, integral);
+                vMultiplicityRatios[ybin]->SetBinError(binnr, error);
             }
         }
-    }
-    // do ratio plots here:
-    // Don't forget to handle the K0's
-    TH1D* hXiMinRatio = (TH1D*) hTempRatio->Clone();
-    hXiMinRatio->SetName("hXiMinRatio");
-    hXiMinRatio->SetTitle("test");
-    for(auto bla : XiMinMap){
-        TH1D* OS = bla.second.hOS;
-        TH1D* SS = bla.second.hSS;
-        // scale with expected N events before resetting sumw2
-        if(doEff){
-            OS->Scale(100);
-            SS->Scale(100);
-        }
-
-        // reset errors to be equal to sqrt(N), needed when filling with weights due to efficiency
-        // doesn't change anything when running without efficiency
-        OS->GetSumw2()->Set(0);
-        OS->Sumw2();
-        SS->GetSumw2()->Set(0);
-        SS->Sumw2();
-        
-        // TODO: make OS - SS plot (perhaps also compute integral?)
-        TH1D* hSignal = (TH1D*) hTempDPhi->Clone();
-        TString name = OS->GetName();
-        hSignal->SetName(name + "_subtracted");
-        hSignal->Add(OS, SS, 1, -1);
-
-        // make ratio plot
-        TString binname = StrangeHadronPDGMap.at(bla.first)->getAntiParticle()->getLatex();
-        Double_t nOS = bla.second.nOS;
-        Double_t nSS = bla.second.nSS;
-        Double_t bincontent = nOS - nSS;
-        Double_t error = sqrt(nOS + nSS);
-        // perhaps error should be sqrt(2*nSS+nOS-nSS)
-
-        binnr = hXiMinRatio->Fill(binname, bincontent);
-        hXiMinRatio->SetBinError(binnr, error);
-    }
-
-    // quickly do Omega, FIXME
-    TH1D* hOmegaRatio = (TH1D*) hTempRatio->Clone();
-    hOmegaRatio->SetName("hOmeganRatio");
-    hOmegaRatio->SetTitle("test");
-    for(auto bla : OmegaMap){
-        TH1D* OS = bla.second.hOS;
-        TH1D* SS = bla.second.hSS;
-        // scale with expected N events before resetting sumw2
-        if(doEff){
-            OS->Scale(100);
-            SS->Scale(100);
-        }
-        // reset errors to be equal to sqrt(N), needed when filling with weights due to efficiency
-        OS->GetSumw2()->Set(0);
-        OS->Sumw2();
-        SS->GetSumw2()->Set(0);
-        SS->Sumw2();
-
-        // TODO: make OS - SS plot (perhaps also compute integral?)
-        TH1D* hSignal = (TH1D*) hTempDPhi->Clone();
-        TString name = OS->GetName();
-        hSignal->SetName(name + "_subtracted");
-        hSignal->Add(OS, SS, 1, -1);
-
-        // make ratio plot
-        TString binname = StrangeHadronPDGMap.at(bla.first)->getAntiParticle()->getLatex();
-        Double_t nOS = bla.second.nOS;
-        Double_t nSS = bla.second.nSS;
-        Double_t bincontent = nOS - nSS;
-        Double_t error = sqrt(nOS + nSS);
-        // perhaps error should be sqrt(2*nSS+nOS-nSS)
-
-        binnr = hOmegaRatio->Fill(binname, bincontent);
-        hOmegaRatio->SetBinError(binnr, error);
     }
 
     outputfile->Write();
