@@ -30,7 +30,7 @@ TH1D makeEfficiency(const char* filepath, Double_t BR = 1){
     Double_t BinEdges[nbins], Efficiency[nbins]; 
     std::copy(_BinEdges.begin(), _BinEdges.end(), BinEdges);
     std::copy(_Efficiency.begin(), _Efficiency.end(), Efficiency);
-    TH1D hEfficiency = TH1D("hXiEff", "Efficiency for Xi", nbins - 1, BinEdges); 
+    TH1D hEfficiency = TH1D("hEff", "Efficiency", nbins - 1, BinEdges); 
     for(int i = 0; i < nbins; i++) hEfficiency.SetBinContent(i+1, BR*Efficiency[i]);
     // TODO: handle under- and overflow: underflow is 0 probably good, but overflow > 0.
     return hEfficiency;
@@ -38,16 +38,10 @@ TH1D makeEfficiency(const char* filepath, Double_t BR = 1){
 
 int main() {
 
-    // make inputfiles an input argument
+    // TODO: make inputfiles an input argument
 
     gSystem->Load("lib/libEvent.so");
     // TH1::SetDefaultSumw2(); // make sure errors are propagated in histo'ss
-    
-    // stbc input filepaths:
-    // "/data/alice/rspijker/output/220926_Monash_pp_10M_14TeV_minpT0p15/"
-    // "/data/alice/rspijker/output/220926_Monash_ppbar_10M_14TeV_minpT0p15/"
-    // "/data/alice/rspijker/output/220926_Ropes_pp_10M_14TeV_minpT0p15/"
-    // "/data/alice/rspijker/output/220926_SkandsMode2_pp_10M_14TeV_minpT0p15/"
 
     TChain* chain = new TChain("tree");
     chain->Add("~/alice/data/ModelStudyJan/Monash_pp_100M_14TeV/*.root");
@@ -74,6 +68,7 @@ int main() {
     TDirectory* XiZerodir = outputfile->mkdir(Xizero.getName());
     TDirectory* Omegadir = outputfile->mkdir(Omegaminus.getName());
     TDirectory* ratiodir = outputfile->mkdir("ratios");
+    TDirectory* yielddir = outputfile->mkdir("yield");
     TDirectory* XiMinusSubdir = outputfile->mkdir(Ximinus.getName()+"/subtracted");
     TDirectory* XiZeroSubdir = outputfile->mkdir(Xizero.getName()+"/subtracted");
     TDirectory* OmegaSubdir = outputfile->mkdir(Omegaminus.getName()+"/subtracted");
@@ -88,15 +83,23 @@ int main() {
         } 
         hSpectra->Add(h_);
     }
+    const Int_t nMultiplicityBins = 7;
+    Double_t multiplicityBinning[nMultiplicityBins+1] = {0, 50, 200, 350, 450, 550, 650, 1000};
     TH1D* hPDG = hSpectra->ProjectionX();
     hPDG->SetName("hPDG");
+    TH1I* hncands = new TH1I("hNStrangeHadrons", "N strange particles per event", 100, 0, 100); // to be filled in event loop
+    TH2I* hPDGMultiplicity = new TH2I("hPDGMultiplicity", "Yield of hadrons that pass kinematic selections;PDG;Ntracks", 8000, -4000, 4000, nMultiplicityBins, multiplicityBinning);
+    TH1D* hStrangenessPerStrangeTrigger = new TH1D("hStrangenessPerStrangeTrigger", "Percent strangeness per trigger (+ = OS)", 37, -3-(1./12.), 3+(1./12.));
+    TH1D* hStrangenessPerAntiStrangeTrigger = new TH1D("hStrangenessPerAntiStrangeTrigger", "Percent strangeness per anti trigger (+ = OS)", 37, -3-(1./12.), 3+(1./12.));
+
 
     // TODO setnames
-    TH1D hXiEffobj = makeEfficiency("efficiencies/XiMin.csv", 0.64);
+    TH1D hXiEffobj = makeEfficiency("efficiencies/XiMin.csv", 0.64); // Lambda -> p+ K- ~ 64%
     TH1D* hXiEff = &hXiEffobj;
-
+    hXiEff->SetName("hXiEff");
     TH1D hOmegaEffobj = makeEfficiency("efficiencies/Omegamin.csv", 0.68*0.64); //Omega -> Lambda K- ~ 68%
     TH1D* hOmegaEff = &hOmegaEffobj;
+    hOmegaEff->SetName("hOmegaEff");
 
     // Make vector with all the strange hadrons
     std::vector<Hadron*> posStrangeHadrons;
@@ -118,12 +121,11 @@ int main() {
     // array of interesting triggers
     std::map<Hadron*, assocmap> triggermap = {{&Ximinus, XiMinMap}, {&Xizero, XiZeroMap}, {&Omegaminus, OmegaMap}};
 
-    Double_t multiplicityBinning[7] = {0, 50, 200, 350, 500, 650, 1000};
-    TH2D* hTempDPhi = new TH2D("hTempDPhi", "Overwrite this title;#Delta#varphi;Ntracks", 32, -0.5*PI, 1.5*PI, 6, multiplicityBinning); // 32 bins is easy to rebin
-    // TH2D* hTempRatio = new TH2D("hTempRatio", "Overwrite this title;Associate hadron;Multiplicity", nbins, 0, nbins, 6, multiplicityBinning); 
-    TH1D* hTempRatio = new TH1D("hTempRatio", "Overwrite this title;Associate hadron;Ntracks", nbins, 0, nbins); 
+    TH2D* hTempDPhi = new TH2D("hTempDPhi", "Overwrite this title;#Delta#varphi;Ntracks", 64, -0.5*PI, 1.5*PI, nMultiplicityBins, multiplicityBinning); // 64 bins is easy to rebin
+    TH1D* hTempRatio = new TH1D("hTempRatio", "Overwrite this title;Associate hadron;pairs", nbins, 0, nbins); 
     TAxis* ax = hTempRatio->GetXaxis();
     hTempRatio->SetXTitle("Associate hadron");
+    // TODO: draw dotted gray line at 0 for the ratio plot
     assocmap assocmapdummy; // needs to be defined before the loop, otherwise it won't survive the loop
     for (auto& trig : triggermap){
         Hadron* trigger = trig.first; 
@@ -145,10 +147,10 @@ int main() {
 
             TH2D* hSS = (TH2D*) hTempDPhi->Clone();
             hSS->SetName(trigger->getName()+assoc->getName()+"Dphi");
-            hSS->SetTitle(triglatex + "(" + antitriglatex + ")" + assoclatex + "(" + antiassoclatex + ") correlations");
+            hSS->SetTitle(triglatex + "(" + antitriglatex + ") - " + assoclatex + "(" + antiassoclatex + ") correlations");
             TH2D* hOS = (TH2D*) hTempDPhi->Clone();
             hOS->SetName(trigger->getName()+antiassoc->getName()+"Dphi");
-            hOS->SetTitle(triglatex + "(" + antitriglatex + ")" + antiassoclatex + "(" + assoclatex + ") correlations");
+            hOS->SetTitle(triglatex + "(" + antitriglatex + ") - " + antiassoclatex + "(" + assoclatex + ") correlations");
 
             datastruct.hSS = hSS;
             datastruct.hOS = hOS;
@@ -160,25 +162,32 @@ int main() {
     // Analysis options
     const Bool_t doEff = false;
     const Double_t minpT = 1.2;
-    const Double_t maxEtaTrigger = 2.;
-    const Double_t maxEtaAssoc = 2.;
-    const Double_t maxRapidity = 2.;
+    const Double_t maxEta = 2.;
+    const Double_t maxY = 2.;
+
+    // allow for different kinematic cuts between trigger and assoc
+    const Double_t minpTTrigger = minpT;
+    const Double_t minpTAssoc = minpT;
+    const Double_t maxEtaTrigger = maxEta;
+    const Double_t maxEtaAssoc = maxEta;
+    const Double_t maxYTrigger = maxY;
+    const Double_t maxYAssoc = maxY;
+
     // TODO: const Bool_t BkgScaling =  false; // do bkg scaling, needed to account for asymmetry in pp collisions
-    std::set<Int_t> uniqueTriggerPDGs, uniqueAssocPDGs; // to keep track of possible PDG
 
     // Set branch address, so we can use the variables when we GetEntry()
     SmallEvent *event = new SmallEvent();
     chain->SetBranchAddress("event", &event);
 
-    // initialize expensive objects
-    SmallTrack XiCand;
-    SmallTrack Assoc;
+    // initialize objects
+    std::map<Hadron*, Double_t> nTriggers;
+    for (auto t : triggermap) nTriggers[t.first] = 0;        
+    SmallTrack trigger;
+    SmallTrack assoc;
     std::vector<SmallTrack> cands = {};
     DataStruct* fillXi;
     std::map<Int_t, DataStruct>* XiMap;
-
-    // TODO: make nice, this is to debug
-    TH1I* hncands = new TH1I("hncands", "N strange particles per event", 100, 0, 100);
+    Double_t y,y2;
 
     const Long64_t nEvents = chain->GetEntries(); 
     for(Int_t iEvent = 0; iEvent < nEvents; iEvent++){
@@ -188,35 +197,48 @@ int main() {
         Int_t nCands = cands.size();
         hncands->Fill(nCands);
         for(Int_t i = 0; i < nCands; i++){
-            XiCand = cands[i];
-            Int_t pdg = XiCand.getPDG();
+            trigger = cands[i];
+            Int_t pdg = trigger.getPDG();
             Int_t abspdg = abs(pdg);
+            Hadron* triggerHadron = StrangeHadronPDGMap.at(abspdg);
 
             // ad hoc check for xi or omega
-            Bool_t isXi = true; 
-            if(abspdg == Ximinus.getPDG()){
-                // XiMap = &XiMinMap;
+            Bool_t isXi = true; // keep track of Xi or Omega
+            if(triggerHadron == &Ximinus){
                 XiMap = &triggermap[&Ximinus];
-            } else if (abspdg == Xizero.getPDG()){
-                // XiMap = &XiZeroMap;
+            } else if (triggerHadron == &Xizero){
                 XiMap = &triggermap[&Xizero];
-            } else if (abspdg == Omegaminus.getPDG()){
+            } else if (triggerHadron == &Omegaminus){
                 isXi = false;
-                // XiMap = &OmegaMap;
                 XiMap = &triggermap[&Omegaminus];
             } else continue;
 
+            // TODO: make a nice way to do either Y or Eta
             // Kine cuts: do either rapidity or pseudorapidity cut ( + pt cut)
-            // if (XiCand.getpT() < minpT || XiCand.geteta() > maxEtaTrigger) continue; 
-            Double_t y = rapidityFromEta(XiCand.getEta(), XiCand.getpT(), 1.320);
-            if (XiCand.getpT() < minpT || abs(y) > maxRapidity) continue; // Xi's are roughly 1.320 GeV
+            // psuedorapidity
+            if (trigger.getpT() < minpTTrigger || trigger.getEta() > maxEtaTrigger) continue; 
+            // // Rapidity
+            // Double_t massTrigger;
+            // try{
+            //     massTrigger = StrangeHadronPDGMap.at(Assoc.getPDG())->getMass();
+            // } catch (std::out_of_range){
+            //     std::cout << "unknown pdg, skipping. pdg = " << Assoc.getPDG() << std::endl;
+            //     continue;
+            // }
+            // y = rapidityFromEta(XiCand.getEta(), XiCand.getpT(), massTrigger);
+            // if (XiCand.getpT() < minpT || abs(y) > maxYTrigger) continue; 
+
+            // keep track of n_triggers for normalization
+            // nTriggers.at(triggerHadron)++;
+            hPDGMultiplicity->Fill(pdg, multiplicity);
+
             // do eff cut here (optional):
             Double_t eff = 1;
             if(doEff){
                 if(isXi) {
-                    eff *= hXiEff->GetBinContent(hXiEff->GetBin(XiCand.getpT()));
+                    eff *= hXiEff->GetBinContent(hXiEff->GetBin(trigger.getpT()));
                 } else {
-                    eff *= hOmegaEff->GetBinContent(hOmegaEff->GetBin(XiCand.getpT()));
+                    eff *= hOmegaEff->GetBinContent(hOmegaEff->GetBin(trigger.getpT()));
                 }
                 if(0.5 < abs(y)) eff*= 2*(1-abs(y)); // we already know y < ymax
             }
@@ -228,35 +250,51 @@ int main() {
                 std::cout << "unknown pdg, skipping. pdg = " << pdg << std::endl;
                 continue;
             }
+
+            //debug
+            Double_t StrangeTrigger = (Double_t) SS;
+            Double_t sPerT = 0;
             
             for(Int_t j = 0; j < nCands; j++){
                 if(i == j) continue; // don't correlate with self
-                Assoc = cands[j];
-                // kine cuts 
-                Double_t mass;
-                try{
-                    mass = StrangeHadronPDGMap.at(Assoc.getPDG())->getMass();
-                } catch (std::out_of_range){
-                    std::cout << "unknown pdg, skipping. pdg = " << Assoc.getPDG() << std::endl;
-                    continue;
-                }
+                assoc = cands[j];
 
-                Double_t y2 = rapidityFromEta(Assoc.getEta(), Assoc.getpT(), mass);
-                if(Assoc.getpT() < minpT || abs(y2) > maxRapidity) continue; 
+                // TODO: make a nice way to do either Y or Eta
+                // kine cuts (do one of these, not both!)
+                // pseudorapidity
+                if (assoc.getpT() < minpTAssoc || assoc.getEta() > maxEtaAssoc) continue; 
+                // // Rapidity
+                // Double_t massAssoc;
+                // try{
+                //     massAssoc = StrangeHadronPDGMap.at(Assoc.getPDG())->getMass();
+                // } catch (std::out_of_range){
+                //     std::cout << "unknown pdg, skipping. pdg = " << Assoc.getPDG() << std::endl;
+                //     continue;
+                // }
+                // y2 = rapidityFromEta(Assoc.getEta(), Assoc.getpT(), massAssoc);
+                // if(Assoc.getpT() < minpT || abs(y2) > maxYAssoc) continue; 
 
-                Int_t pdgAssoc = Assoc.getPDG();
+                Int_t pdgAssoc = assoc.getPDG();
                 // skip K0's
                 if(pdgAssoc == Kzeroshort.getPDG() || pdgAssoc == Kzerolong.getPDG()) continue;
-                //efficiency in case of Ximin or Omega
-                if(doEff) {
+                
+                if(doEff) { // Efficiency 
                     if (abs(pdgAssoc) == Ximinus.getPDG()){
-                        eff *= hXiEff->GetBinContent(hXiEff->GetBin(Assoc.getpT()));
+                        eff *= hXiEff->GetBinContent(hXiEff->GetBin(assoc.getpT()));
                     } else if (abs(pdgAssoc) == Omegaminus.getPDG()) {
-                        eff *= hOmegaEff->GetBinContent(hOmegaEff->GetBin(Assoc.getpT()));
+                        eff *= hOmegaEff->GetBinContent(hOmegaEff->GetBin(assoc.getpT()));
                     } else continue;
                     if(0.5 < abs(y2)) eff*= 2*(1-abs(y2)); // we already know y < ymax
                 }
-                Double_t dphi = DeltaPhi(XiCand.getPhi(), Assoc.getPhi());
+                // calculate dphi
+                Double_t dphi = DeltaPhi(trigger.getPhi(), assoc.getPhi());
+
+                // duplicate trigger check: incase of for example Omega-Omega correlations, we only want to fill the histo once. 
+                // However, we will encounter this combination twice: one time for each Omega. 
+                Double_t doublecount = 1.;
+                if(abspdg==abs(pdgAssoc)) doublecount = 0.5;
+
+                // figure out which histogram to fill
                 try{
                     fillXi = &XiMap->at(pdgAssoc);
                 } catch (std::out_of_range){
@@ -266,37 +304,50 @@ int main() {
                 }
                 // fill correct dphi hist and update yield.
                 if(SS >= 1){
-                    fillXi->hSS->Fill(dphi, multiplicity, eff);
-                    fillXi->nSS++;
+                    fillXi->hSS->Fill(dphi, multiplicity, eff*doublecount);
+                    fillXi->nSS+=eff*doublecount;
                 } else {
-                    fillXi->hOS->Fill(dphi, multiplicity, eff);
-                    fillXi->nOS++;
+                    fillXi->hOS->Fill(dphi, multiplicity, eff*doublecount);
+                    fillXi->nOS+=eff*doublecount;
                 }
-            } // 2nd cand loop
-        } // 1st cand loop
+                sPerT += StrangeHadronPDGMap.at(pdgAssoc)->getStrangeness();
+            } // assoc loop
+
+            if(StrangeTrigger>0) {
+                hStrangenessPerStrangeTrigger->Fill(-sPerT/StrangeTrigger);
+            } else {
+                hStrangenessPerAntiStrangeTrigger->Fill(-sPerT/StrangeTrigger);
+            }
+        } // trigger loop
     } // event loop
 
-    // do ratio plots here:
-    // Let's try to do it with a loop over the triggers
-    Int_t nMultiplicityBins = hTempDPhi->GetNbinsY();
-    cout << nMultiplicityBins << endl;
+    // postprocessing
     for(auto& trig : triggermap){
-        // Don't forget to handle the K0's
         Hadron* trigger = trig.first;
-        outputfile->cd(trigger->getName()+"/subtracted");
+        ratiodir->cd();
         TH1D* hRatio = (TH1D*) hTempRatio->Clone();
         hRatio->SetName("h"+trigger->getName()+"_ratio");
         hRatio->SetTitle("Correlations between " + trigger->getLatex() + " and assocates (number of pairs)");
-        hRatio->SetDirectory(ratiodir);
+        // Int_t pdg = trigger->getPDG(); 
+        // Int_t minpdgbin = hPDGMultiplicity->GetXaxis()->FindBin(-pdg);
+        // Int_t pospdgbin = hPDGMultiplicity->GetXaxis()->FindBin(pdg);
+        // TH1D* projection = hPDGMultiplicity->ProjectionX();
+        // Double_t totalnorm = projection->GetBinContent(minpdgbin) + projection->GetBinContent(pospdgbin);
+        // cout << totalnorm << endl;
+        // std::vector<Double_t> norm;
         std::vector<TH1D*> vMultiplicityRatios;
         for(Int_t i = 0; i < nMultiplicityBins; i++){
+            // norm.push_back(hPDGMultiplicity->GetBinContent(minpdgbin,i+1) + hPDGMultiplicity->GetBinContent(pospdgbin,i+1));
             TString loweredge = std::to_string((int) multiplicityBinning[i]);
             TString upperedge = std::to_string((int) multiplicityBinning[i+1]);
             TH1D* h = (TH1D*) hTempRatio->Clone();
-            TString name = TString(loweredge+"-"+upperedge+" N_part");
+            TString name = TString(trigger->getName()+"_"+loweredge+"-"+upperedge+"_N_part");
+            TString title = TString("Correlations between " + trigger->getLatex() + " and assocates, "+loweredge+" < N_parts < "+upperedge);
             h->SetName(name);
+            h->SetTitle(title);
             vMultiplicityRatios.push_back(h);
         }
+        outputfile->cd(trigger->getName()+"/subtracted");
         for(auto bla : trig.second){
             TH2D* OS = bla.second.hOS;
             TH2D* SS = bla.second.hSS;
@@ -313,7 +364,7 @@ int main() {
             SS->GetSumw2()->Set(0);
             SS->Sumw2();
             
-            // TODO: make OS - SS plot (perhaps also compute integral?)
+            // make signal plots
             TH2D* hSignal = (TH2D*) hTempDPhi->Clone();
             TString name = OS->GetName();
             TString title = OS->GetTitle();
@@ -322,26 +373,36 @@ int main() {
             hSignal->Add(OS, SS, 1, -1);
 
             // make total ratio plot
-            TString binname = StrangeHadronPDGMap.at(bla.first)->getAntiParticle()->getLatex();
+            Hadron* antiAssoc = StrangeHadronPDGMap.at(bla.first)->getAntiParticle();
+            TString binname = antiAssoc->getLatex();
             Double_t nOS = bla.second.nOS;
             Double_t nSS = bla.second.nSS;
-            Double_t bincontent = nOS - nSS;
+            Double_t yield = nOS - nSS;
             Double_t error = sqrt(nOS + nSS);
-            // perhaps error should be sqrt(2*nSS+nOS-nSS)
-
-            Int_t binnr = hRatio->Fill(binname, bincontent);
+            Int_t binnr = hRatio->Fill(binname, yield);
             hRatio->SetBinError(binnr, error);
 
+            // yields per multiplicity
+            TH1D* hYield = new TH1D("hYield", "Yield", nMultiplicityBins, multiplicityBinning);
+            hYield->SetTitle("Yields of "+trigger->getLatex()+" - "+antiAssoc->getLatex()+" pairs");
+            hYield->SetName(trigger->getName()+"-"+antiAssoc->getName());
+            hYield->SetDirectory(yielddir);
             // So with this 2D signal histo, we can make ratioplots per multiplicitybin
-            for(Int_t ybin = 0; ybin < nMultiplicityBins; ybin++){
-                Double_t integral, error;
+            for(Int_t i = 0; i < nMultiplicityBins; i++){
                 Int_t nxbins = hSignal->GetNbinsX();
-                integral = hSignal->IntegralAndError(0, nxbins, ybin, ybin+1, error);
-                binnr = vMultiplicityRatios[ybin]->Fill(binname, integral);
-                vMultiplicityRatios[ybin]->SetBinError(binnr, error);
-            }
+                yield = hSignal->IntegralAndError(0, nxbins, i, i+1, error);
+                binnr = vMultiplicityRatios[i]->Fill(binname, yield);
+                vMultiplicityRatios[i]->SetBinError(binnr, error);
+                hYield->SetBinContent(i+1, yield);
+                hYield->SetBinError(i+1, error);
+            } // end multiplicity loop
+        } // end assoc loop
+        // normalize histograms
+        hRatio->Scale(1/hRatio->Integral()); 
+        for (TH1D* h : vMultiplicityRatios){
+            h->Scale(1/h->Integral()); 
         }
-    }
+    } // end trigger loop
 
     outputfile->Write();
     outputfile->Close();
