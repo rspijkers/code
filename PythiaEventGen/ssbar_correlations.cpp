@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 
 	// Analysis settings
 	const Bool_t	doOmegaTrigger = true; 
-	const Double_t 	pTmin = 0;
+	const Double_t 	pTmin = 0.05;
 	const Double_t 	maxEta = 4.;
 
 	Pythia pythia;
@@ -105,6 +105,9 @@ int main(int argc, char** argv)
 	// Use THnSparse with PDG, pT, eta, since most bins are empty due to the PDG codes
 	TH3D* hSpectra = new TH3D("hSpectra","PDG, p_{T}, #eta for all non-exotic particles (|PDG| < 4000);PDG;p_{T} (GeV/c);#eta", 8000, -4000, 4000, 100, 0, 20, 100, -maxEta, maxEta);
 
+	Int_t Ntracks4p0;
+	Int_t Ntracks2p4;
+	Int_t Ntracks0p8;
 	Int_t pdg;
 	Double_t pT;
 	Double_t eta;
@@ -131,12 +134,13 @@ int main(int argc, char** argv)
 					break;
 				} 
 			}
-			if(!trigger) continue; // no trigger? go next!
-			// If we do have a trigger, proceed as normal. 
+			if(!trigger) continue; // no trigger? go next! If we do have a trigger, proceed as normal. 
 		}
 
 		int candidatesPerEvent = 0;
-		int nFinalState = 0;
+		Ntracks4p0 = 0;
+		Ntracks2p4 = 0;
+		Ntracks0p8 = 0;
 		pTssbar = -1.;
 		
 		for(int iPart = 0; iPart < nPart; iPart++) { // particle loop
@@ -147,14 +151,17 @@ int main(int argc, char** argv)
 			if(part.status()==-23 && abs(pdg)==3 && part.pT() > pTssbar) pTssbar = part.pT();
 			
 			if(!part.isFinal()) continue; // final state particle 
-			nFinalState++;
 			pT = part.pT();
 			eta = part.eta();
+			Double_t abseta = abs(eta);
 
 			// Fill the UE histo
 			hSpectra->Fill((Double_t) pdg, pT, eta);
 
-			if(!IsStrange(pdg) || pT < pTmin || abs(eta) > maxEta) continue; // kine cuts & strangeness check
+			if(!IsStrange(pdg) || pT < pTmin || abseta > maxEta) continue; // kine cuts & strangeness check
+			Ntracks4p0++;
+			if(abseta < 2.4) Ntracks2p4++; 
+			if(abseta < 0.8) Ntracks0p8++;
 
 			phi = part.phi();
 
@@ -168,7 +175,9 @@ int main(int argc, char** argv)
 			candidatesPerEvent++;
 		} // end track loop
 		event->setEventId(eventIdOffset+iEvent);
-		event->setNtracks(nFinalState);
+		event->setNtracks4p0(Ntracks4p0);
+		event->setNtracks2p4(Ntracks2p4);
+		event->setNtracks0p8(Ntracks0p8);
 		event->setpTssbar(pTssbar);
 		tree->Fill();
 		event->Clear();
