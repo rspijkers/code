@@ -1,0 +1,6 @@
+In this folder you will find pythia scripts, and steering scripts (shell) to run these pythia scripts on the stbc grid. 
+Note that one needs the `SmallEvent.h` and `SmallTrack.h` headers + src to run this specific pythia script. 
+
+The `Makefile` compiles the pythia script with the relevant libraries. The script can then be executed from a terminal with `./ssbar_correlations <outputfile> <pythiaconfig> <runNr>`. The pythia config files can be found in the `pythia_settings` folder, while the `runNr` is an optional integer that makes parallel running on the stbc grid easier. For example: `./ssbar_correlations "resultsMonash.root" "pythia_settings/ssbar_monash.cmnd" 1`. 
+
+In order to run multiple productions in parallel on the stbc grid one can use `runScript.sh` by simply executing `bash runScript.sh` when on an interactive stbc node. This script compiles the pythia script and submits N jobs (10 by default) to the grid system with the relevant filepaths defined in the bash script. This steering script makes use of the run number so as to ensure each event has a unique identifier across multiple parallel productions. 
