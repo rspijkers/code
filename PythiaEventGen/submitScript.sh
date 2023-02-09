@@ -13,6 +13,7 @@ JOB_ID=$(echo $PBS_JOBID | cut -d'.' -f 1)
 
 OUTPUTDIR=$1
 OUTPUTFILE="$OUTPUTDIR/$JOB_ID.root"
-RUNNR=$2
+PYTHIACONFIG=$2
+RUNNR=$3
 
-eval "alienv setenv $ENVIRONMENT -c ./ssbar_correlations $OUTPUTFILE $RUNNR"
+eval "alienv setenv $ENVIRONMENT -c ./ssbar_correlations $OUTPUTFILE $PYTHIACONFIG $RUNNR"

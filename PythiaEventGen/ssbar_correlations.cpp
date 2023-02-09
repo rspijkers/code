@@ -46,25 +46,28 @@ bool IsStrange(Int_t particlepdg) {
 
 int main(int argc, char** argv)
 {	
+	// we expect the following arguments:
+	// outputfilepath, cmnd filepath, runNr (optional)
 	Int_t runNr = 0;
 	// main() counts as one argument
 	if (argc < 2) {
 		cerr << "Error: Too few command-line arguments! You are expected to give at least a file path for the output." << endl;
 		return 1;
-	} else if (argc == 3) {
+	} else if (argc == 4) {
 		try{
-			runNr = std::stoi(argv[2]);
+			runNr = std::stoi(argv[3]);
 		} catch(std::invalid_argument) {
 			cerr << "Error: Could not convert the run number to an integer! " << endl;
 			return 1;
 		}
-	} else if (argc > 3) {
+	} else if (argc > 4) {
 		cerr << "Error: Too many command-line arguments! You are expected to give at most a file path for the output and a run number. " << endl;
 		return 1;
 	}
 	// TODO: check if argument is a valid path?		
 
 	const char* outFilePath = argv[1];
+	const char* pythiaOptions = argv[2];
 
 	// start keeping track of time
     auto start = std::chrono::high_resolution_clock::now();
@@ -79,7 +82,8 @@ int main(int argc, char** argv)
 	Pythia pythia;
 
 	// PYTHIA SETTINGS
-	pythia.readFile("pythia_settings/ssbar_monash.cmnd");
+	pythia.readFile(pythiaOptions);
+	// pythia.readFile("pythia_settings/ssbar_monash.cmnd");
 	Int_t nEvents = pythia.mode("Main:numberOfEvents");
 	const Int_t eventIdOffset = nEvents*(runNr-1);
 

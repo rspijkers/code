@@ -12,6 +12,9 @@ OUTPUTPATH="/dcache/alice/rspijker/ModelStudyJan"
 OUTPUTDIR="Monash_pp_100M_14TeV"
 [ ! -d "$OUTPUTPATH/$OUTPUTDIR" ] && mkdir -p "$OUTPUTPATH/$OUTPUTDIR" && echo "outputdir created"
 
+# pythia config file
+PYTHIACONFIG="pythia_settings/ssbar_monash.cmnd"
+
 # make pythia script
 alienv setenv $ENVIRONMENT -c make ssbar_correlations -B
 if [ $? -ne 0 ]; then
@@ -23,5 +26,5 @@ fi
 for i in {1..10}
 do
     echo "submit number $i"
-    qsub -F "$OUTPUTPATH/$OUTPUTDIR $i" submitScript.sh
+    qsub -F "$OUTPUTPATH/$OUTPUTDIR $PYTHIACONFIG $i" submitScript.sh
 done
