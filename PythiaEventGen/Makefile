@@ -7,17 +7,22 @@ CXXFLAGS:=$(shell root-config --cflags) -I$(PYTHIA8)/include $(shell root-config
 ##### This is needed if you want to fill a Tree with a custom Event class for instance
 
 # make sure there is no whitespace after paths
-# CPATH=/user/rspijker/code# 			# NIKHEF STBC
-CPATH=/home/rik/cernbox/PhD/code# 	# path to code repository
-LIB=$(CPATH)/lib#
-SRC=$(CPATH)/src#
-INCLUDE=$(CPATH)/include#
+CPATH:=/home/rik/cernbox/PhD/code# 	# path to code repository
+
+ifeq (stbc,$(findstring stbc,$(shell hostname)))
+CPATH:=/user/rspijker/project/code
+$(info stbc node detected! Changing path accordingly.)
+endif
+
+LIB:=$(CPATH)/lib#
+SRC:=$(CPATH)/src#
+INCLUDE:=$(CPATH)/include#
 ROOTPATH:=$(ROOTSYS)/include# 		# Path to ROOT header files (TFile.h, ...)
-HEADERS = SmallTrack.h SmallEvent.h#				# Headers containing the classes
-FILES = SmallTrack.cpp SmallEvent.cpp#				# Source files accompanying the headers
-SOURCES = $(FILES:%.cpp=$(SRC)/%.cpp)			# prepend source dir to filenames.
-LINKDEF = linkdef.h# 					# linkdef file containing pragma statements concerning which classes to include in the dictionary
-DICT=EventDict.cpp#					# Name of the dictionary to be created, can pretty much be anything
+HEADERS := SmallTrack.h SmallEvent.h#				# Headers containing the classes
+FILES := SmallTrack.cpp SmallEvent.cpp#				# Source files accompanying the headers
+SOURCES := $(FILES:%.cpp=$(SRC)/%.cpp)			# prepend source dir to filenames.
+LINKDEF := linkdef.h# 					# linkdef file containing pragma statements concerning which classes to include in the dictionary
+DICT:=EventDict.cpp#					# Name of the dictionary to be created, can pretty much be anything
 
 # Only do this if test.cpp exists. Executing `make ssbar_correlations` targets this specifically. Explanation of the recipe below.
 # remove all the '@' at the start of the lines for debugging
