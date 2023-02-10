@@ -75,7 +75,7 @@ int main(int argc, char** argv)
 	// TODO: get kinematic options from json config file?
 
 	// Analysis settings
-	const Bool_t	doOmegaTrigger = true; 
+	const Bool_t	doOmegaTrigger = false; 
 	const Double_t 	pTmin = 0.05;
 	const Double_t 	maxEta = 4.;
 
@@ -158,10 +158,11 @@ int main(int argc, char** argv)
 			// Fill the UE histo
 			hSpectra->Fill((Double_t) pdg, pT, eta);
 
-			if(!IsStrange(pdg) || pT < pTmin || abseta > maxEta) continue; // kine cuts & strangeness check
+			if(pT < pTmin || abseta > maxEta) continue; // kine cuts & strangeness check
 			Ntracks4p0++;
 			if(abseta < 2.4) Ntracks2p4++; 
 			if(abseta < 0.8) Ntracks0p8++;
+			if(!IsStrange(pdg)) continue;
 
 			phi = part.phi();
 
