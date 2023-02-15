@@ -41,10 +41,10 @@ int main() {
     // TODO: make inputfiles an input argument
 
     gSystem->Load("lib/libEvent.so");
-    // TH1::SetDefaultSumw2(); // make sure errors are propagated in histo'ss
+    TH1::SetDefaultSumw2(); // make sure errors are propagated in histo'ss
 
     TChain* chain = new TChain("tree");
-    chain->Add("~/alice/data/ModelStudyJan/Monash_pp_100M_14TeV/*.root");
+    chain->Add("~/alice/data/ModelStudyFeb/Monash_pp_100M_14TeV/*.root");
 
     // Create list of files 
     TObjArray* fileElements = chain->GetListOfFiles(); // not actually a list of files, hence the TChainElement fuckery
@@ -83,8 +83,9 @@ int main() {
         } 
         hSpectra->Add(h_);
     }
+
     const Int_t nMultiplicityBins = 7;
-    Double_t multiplicityBinning[nMultiplicityBins+1] = {0, 50, 200, 350, 450, 550, 650, 1000};
+    Double_t multiplicityBinning[nMultiplicityBins+1] = {0, 50, 100, 200, 300, 400, 500, 1000};
     TH1D* hPDG = hSpectra->ProjectionX();
     hPDG->SetName("hPDG");
     TH1I* hncands = new TH1I("hNStrangeHadrons", "N strange particles per event", 100, 0, 100); // to be filled in event loop
@@ -159,10 +160,9 @@ int main() {
         trig.second = assocmapdummy; // set the map
     }
 
-    // Analysis options
-    const Bool_t doEff = false;
+    // Kinematics
     const Double_t minpT = 1.2;
-    const Double_t maxEta = 2.;
+    const Double_t maxEta = 4.;
     const Double_t maxY = 2.;
 
     // allow for different kinematic cuts between trigger and assoc
@@ -172,6 +172,16 @@ int main() {
     const Double_t maxEtaAssoc = maxEta;
     const Double_t maxYTrigger = maxY;
     const Double_t maxYAssoc = maxY;
+
+    // Analysis options
+    const Bool_t doEff = false;
+    const Bool_t doEta = true;
+    const Bool_t doRapidity = false;
+    // do either eta or rapidity cut, not both
+    if(doEta && doRapidity){
+        cout << "Error: you cannot both cut on eta and rapidity, please only choose one! Exiting..." << endl;
+        return 1;
+    }
 
     // TODO: const Bool_t BkgScaling =  false; // do bkg scaling, needed to account for asymmetry in pp collisions
 
@@ -192,7 +202,7 @@ int main() {
     const Long64_t nEvents = chain->GetEntries(); 
     for(Int_t iEvent = 0; iEvent < nEvents; iEvent++){
         chain->GetEntry(iEvent);
-        Int_t multiplicity = event->getNtracks();
+        Int_t multiplicity = event->getNtracks4p0();
         cands = event->getCandidates();
         Int_t nCands = cands.size();
         hncands->Fill(nCands);
@@ -213,20 +223,21 @@ int main() {
                 XiMap = &triggermap[&Omegaminus];
             } else continue;
 
-            // TODO: make a nice way to do either Y or Eta
-            // Kine cuts: do either rapidity or pseudorapidity cut ( + pt cut)
-            // psuedorapidity
-            if (trigger.getpT() < minpTTrigger || trigger.getEta() > maxEtaTrigger) continue; 
-            // // Rapidity
-            // Double_t massTrigger;
-            // try{
-            //     massTrigger = StrangeHadronPDGMap.at(Assoc.getPDG())->getMass();
-            // } catch (std::out_of_range){
-            //     std::cout << "unknown pdg, skipping. pdg = " << Assoc.getPDG() << std::endl;
-            //     continue;
-            // }
-            // y = rapidityFromEta(XiCand.getEta(), XiCand.getpT(), massTrigger);
-            // if (XiCand.getpT() < minpT || abs(y) > maxYTrigger) continue; 
+
+            // Psuedorapidity
+            if (doEta && (trigger.getpT() < minpTTrigger || trigger.getEta() > maxEtaTrigger)) continue; 
+            // Rapidity
+            if (doRapidity){
+                Double_t massTrigger;
+                try{
+                    massTrigger = StrangeHadronPDGMap.at(trigger.getPDG())->getMass();
+                } catch (std::out_of_range){
+                    std::cout << "unknown pdg, skipping. pdg = " << trigger.getPDG() << std::endl;
+                    continue;
+                }
+                y = rapidityFromEta(trigger.getEta(), trigger.getpT(), massTrigger);
+                if (trigger.getpT() < minpT || abs(y) > maxYTrigger) continue; 
+            }
 
             // keep track of n_triggers for normalization
             // nTriggers.at(triggerHadron)++;
@@ -259,20 +270,20 @@ int main() {
                 if(i == j) continue; // don't correlate with self
                 assoc = cands[j];
 
-                // TODO: make a nice way to do either Y or Eta
-                // kine cuts (do one of these, not both!)
-                // pseudorapidity
-                if (assoc.getpT() < minpTAssoc || assoc.getEta() > maxEtaAssoc) continue; 
-                // // Rapidity
-                // Double_t massAssoc;
-                // try{
-                //     massAssoc = StrangeHadronPDGMap.at(Assoc.getPDG())->getMass();
-                // } catch (std::out_of_range){
-                //     std::cout << "unknown pdg, skipping. pdg = " << Assoc.getPDG() << std::endl;
-                //     continue;
-                // }
-                // y2 = rapidityFromEta(Assoc.getEta(), Assoc.getpT(), massAssoc);
-                // if(Assoc.getpT() < minpT || abs(y2) > maxYAssoc) continue; 
+                // Pseudorapidity
+                if (doEta && (assoc.getpT() < minpTAssoc || assoc.getEta() > maxEtaAssoc)) continue; 
+                // Rapidity
+                if (doRapidity){
+                    Double_t massAssoc;
+                    try{
+                        massAssoc = StrangeHadronPDGMap.at(assoc.getPDG())->getMass();
+                    } catch (std::out_of_range){
+                        std::cout << "unknown pdg, skipping. pdg = " << assoc.getPDG() << std::endl;
+                        continue;
+                    }
+                    y2 = rapidityFromEta(assoc.getEta(), assoc.getpT(), massAssoc);
+                    if(assoc.getpT() < minpT || abs(y2) > maxYAssoc) continue; 
+                }
 
                 Int_t pdgAssoc = assoc.getPDG();
                 // skip K0's
@@ -297,8 +308,7 @@ int main() {
                 // figure out which histogram to fill
                 try{
                     fillXi = &XiMap->at(pdgAssoc);
-                } catch (std::out_of_range){
-                    // if it's out of range, it's an anti strange assoc
+                } catch (std::out_of_range){ // if it's out of range, it's an anti strange assoc
                     fillXi = &XiMap->at(-1*pdgAssoc);
                     SS*=-1;
                 }
