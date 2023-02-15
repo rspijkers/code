@@ -36,15 +36,15 @@ TH1D makeEfficiency(const char* filepath, Double_t BR = 1){
     return hEfficiency;
 }
 
-int main() {
+int main(int argc, char** argv) {
 
-    // TODO: make inputfiles an input argument
+    const char* inputFiles = argv[1];
 
     gSystem->Load("lib/libEvent.so");
     TH1::SetDefaultSumw2(); // make sure errors are propagated in histo'ss
 
     TChain* chain = new TChain("tree");
-    chain->Add("~/alice/data/ModelStudyFeb/Monash_pp_100M_14TeV/*.root");
+    chain->Add(inputFiles);
 
     // Create list of files 
     TObjArray* fileElements = chain->GetListOfFiles(); // not actually a list of files, hence the TChainElement fuckery
@@ -198,6 +198,7 @@ int main() {
     DataStruct* fillXi;
     std::map<Int_t, DataStruct>* XiMap;
     Double_t y,y2;
+    TH1I* hlambda = new TH1I("hlambda", "hlambda", 3, -1, 2);
 
     const Long64_t nEvents = chain->GetEntries(); 
     for(Int_t iEvent = 0; iEvent < nEvents; iEvent++){
@@ -210,7 +211,11 @@ int main() {
             trigger = cands[i];
             Int_t pdg = trigger.getPDG();
             Int_t abspdg = abs(pdg);
+            // debug: lambda vs anti-lambda within kine bounds
+            if (abspdg == 3122 && doEta && trigger.getpT() > minpTTrigger && trigger.getEta() < maxEtaTrigger) hlambda->Fill(pdg/abspdg); 
+
             Hadron* triggerHadron;
+            // try catch needed for weird exotic exited states (e.g. pdg=4434)
             try{
                 triggerHadron = StrangeHadronPDGMap.at(abspdg);
             } catch (std::out_of_range){
@@ -229,7 +234,6 @@ int main() {
                 XiMap = &triggermap[&Omegaminus];
             } else continue;
 
-
             // Psuedorapidity
             if (doEta && (trigger.getpT() < minpTTrigger || trigger.getEta() > maxEtaTrigger)) continue; 
             // Rapidity
@@ -245,8 +249,6 @@ int main() {
                 if (trigger.getpT() < minpT || abs(y) > maxYTrigger) continue; 
             }
 
-            // keep track of n_triggers for normalization
-            // nTriggers.at(triggerHadron)++;
             hPDGMultiplicity->Fill(pdg, multiplicity);
 
             // do eff cut here (optional):
@@ -268,13 +270,14 @@ int main() {
                 continue;
             }
 
-            //debug
+            // Let's keep track of the strangeness per trigger
             Double_t StrangeTrigger = (Double_t) SS;
             Double_t sPerT = 0;
             
             for(Int_t j = 0; j < nCands; j++){
                 if(i == j) continue; // don't correlate with self
                 assoc = cands[j];
+                Int_t pdgAssoc = assoc.getPDG();
 
                 // Pseudorapidity
                 if (doEta && (assoc.getpT() < minpTAssoc || assoc.getEta() > maxEtaAssoc)) continue; 
@@ -282,16 +285,15 @@ int main() {
                 if (doRapidity){
                     Double_t massAssoc;
                     try{
-                        massAssoc = StrangeHadronPDGMap.at(assoc.getPDG())->getMass();
+                        massAssoc = StrangeHadronPDGMap.at(pdgAssoc)->getMass();
                     } catch (std::out_of_range){
-                        std::cout << "unknown pdg, skipping. pdg = " << assoc.getPDG() << std::endl;
+                        std::cout << "unknown pdg, skipping. pdg = " << pdgAssoc << std::endl;
                         continue;
                     }
                     y2 = rapidityFromEta(assoc.getEta(), assoc.getpT(), massAssoc);
                     if(assoc.getpT() < minpT || abs(y2) > maxYAssoc) continue; 
                 }
 
-                Int_t pdgAssoc = assoc.getPDG();
                 // skip K0's
                 if(pdgAssoc == Kzeroshort.getPDG() || pdgAssoc == Kzerolong.getPDG()) continue;
                 
@@ -317,6 +319,9 @@ int main() {
                 } catch (std::out_of_range){ // if it's out of range, it's an anti strange assoc
                     fillXi = &XiMap->at(-1*pdgAssoc);
                     SS*=-1;
+                } catch (std::out_of_range){
+                    std::cout << "unknown assoc pdg, skipping. pdg = " << pdgAssoc << std::endl;
+                    continue;
                 }
                 // fill correct dphi hist and update yield.
                 if(SS >= 1){
