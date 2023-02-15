@@ -210,7 +210,13 @@ int main() {
             trigger = cands[i];
             Int_t pdg = trigger.getPDG();
             Int_t abspdg = abs(pdg);
-            Hadron* triggerHadron = StrangeHadronPDGMap.at(abspdg);
+            Hadron* triggerHadron;
+            try{
+                triggerHadron = StrangeHadronPDGMap.at(abspdg);
+            } catch (std::out_of_range){
+                std::cout << "unknown trigger pdg, skipping. pdg = " << abspdg << std::endl;
+                continue;
+            }
 
             // ad hoc check for xi or omega
             Bool_t isXi = true; // keep track of Xi or Omega
@@ -230,7 +236,7 @@ int main() {
             if (doRapidity){
                 Double_t massTrigger;
                 try{
-                    massTrigger = StrangeHadronPDGMap.at(trigger.getPDG())->getMass();
+                    massTrigger = StrangeHadronPDGMap.at(pdg)->getMass();
                 } catch (std::out_of_range){
                     std::cout << "unknown pdg, skipping. pdg = " << trigger.getPDG() << std::endl;
                     continue;
