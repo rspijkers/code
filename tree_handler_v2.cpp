@@ -317,11 +317,13 @@ int main(int argc, char** argv) {
                 try{
                     fillXi = &XiMap->at(pdgAssoc);
                 } catch (std::out_of_range){ // if it's out of range, it's an anti strange assoc
-                    fillXi = &XiMap->at(-1*pdgAssoc);
-                    SS*=-1;
-                } catch (std::out_of_range){
-                    std::cout << "unknown assoc pdg, skipping. pdg = " << pdgAssoc << std::endl;
-                    continue;
+                    try{
+                        fillXi = &XiMap->at(-1*pdgAssoc);
+                        SS*=-1;
+                    } catch (std::out_of_range){
+                        std::cout << "unknown assoc pdg, skipping. pdg = " << pdgAssoc << std::endl;
+                        continue;
+                    }
                 }
                 // fill correct dphi hist and update yield.
                 if(SS >= 1){
