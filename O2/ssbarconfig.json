@@ -6,65 +6,31 @@
         "ccdb-url": "http:\/\/alice-ccdb.cern.ch",
         "isRun2MC": "false"
     },
-    "track-propagation": {
-        "ccdb-url": "http:\/\/alice-ccdb.cern.ch",
-        "lutPath": "GLO\/Param\/MatLUT",
-        "geoPath": "GLO\/Config\/GeometryAligned",
-        "grpmagPath": "GLO\/Config\/GRPMagField",
-        "mVtxPath": "GLO\/Calib\/MeanVertex",
-        "minPropagationDistance": "83.0999985",
-        "processStandard": "false",
-        "processCovariance": "true"
-    },
     "bc-selection-task": {
         "processRun2": "false",
         "processRun3": "true"
     },
-    "singlestrange-builder": {
-        "createV0CovMats": "-1",
-        "d_UseAutodetectMode": "true",
-        "mincrossedrows": "70",
-        "dcanegtopv": "0.1",
-        "dcapostopv": "0.1",
-        "v0cospa": "0.995",
-        "dcav0dau": "1",
-        "v0radius": "0.9",
-        "tpcrefit": "0",
-        "d_bz": "-999",
-        "d_UseAbsDCA": "true",
-        "d_UseWeightedPCA": "false",
-        "useMatCorrType": "0",
-        "rejDiffCollTracks": "0",
-        "ccdb-url": "http:\/\/alice-ccdb.cern.ch",
-        "grpPath": "GLO\/GRP\/GRP",
-        "grpmagPath": "GLO\/Config\/GRPMagField",
-        "lutPath": "GLO\/Param\/MatLUT",
-        "geoPath": "GLO\/Config\/GeometryAligned",
-        "processRun2": "false",
-        "processRun3": "true"
-    },
-    "cascade-generated": {
-        "maxPt": "20",
-        "nPtBins": "200"
+    "lambdakzero-preselector": {
+        "dIfMCgenerateK0Short": "true",
+        "dIfMCgenerateLambda": "true",
+        "dIfMCgenerateAntiLambda": "true",
+        "dIfMCgenerateGamma": "false",
+        "dIfMCgenerateHypertriton": "false",
+        "dIfMCgenerateAntiHypertriton": "false",
+        "ddEdxPreSelectK0Short": "true",
+        "ddEdxPreSelectLambda": "true",
+        "ddEdxPreSelectAntiLambda": "true",
+        "ddEdxPreSelectGamma": "false",
+        "ddEdxPreSelectHypertriton": "false",
+        "ddEdxPreSelectAntiHypertriton": "false",
+        "ddEdxPreSelectionWindow": "7",
+        "processBuildAll": "true",
+        "processBuildMCAssociated": "false",
+        "processBuildValiddEdx": "false",
+        "processBuildValiddEdxMCAssociated": "false"
     },
     "lambdakzero-builder": {
-        "dcanegtopv": "0.1",
-        "dcapostopv": "0.1",
-        "mincrossedrows": "70",
-        "isRun2": "0",
-        "d_bz": "-999",
-        "d_UseAbsDCA": "true",
-        "d_UseWeightedPCA": "true",
-        "v0cospa": "0.995",
-        "dcav0dau": "1",
-        "v0radius": "5",
-        "useMatCorrType": "0",
-        "rejDiffCollTracks": "0",
-        "ccdb-url": "http:\/\/alice-ccdb.cern.ch",
-        "grpPath": "GLO\/GRP\/GRP",
-        "grpmagPath": "GLO\/Config\/GRPMagField",
-        "lutPath": "GLO\/Param\/MatLUT",
-        "geoPath": "GLO\/Config\/GeometryAligned",
+        "d_UseWeightedPCA": "false",
         "processRun2": "false",
         "processRun3": "true"
     },
@@ -80,11 +46,6 @@
         "doVertexZeq": "1",
         "processRun2": "false",
         "processRun3": "true"
-    },
-    "lambdakzero-particle-count-mc": {
-        "rapidityMCcut": "0.5",
-        "event_sel8_selection": "true",
-        "event_posZ_selection": "true"
     },
     "tpc-pid": {
         "param-file": "",
@@ -106,148 +67,34 @@
         "pid-he": "-1",
         "pid-al": "-1"
     },
-    "multistrange-builder": {
-        "d_UseAutodetectMode": "true",
-        "createCascCovMats": "-1",
-        "mincrossedrows": "70",
-        "tpcrefit": "0",
-        "dcabachtopv": "0.05",
-        "cascradius": "0.9",
-        "casccospa": "0.95",
-        "dcacascdau": "1",
-        "lambdaMassWindow": "0.01",
-        "d_bz": "-999",
-        "d_UseAbsDCA": "true",
-        "d_UseWeightedPCA": "false",
-        "useMatCorrType": "0",
-        "rejDiffCollTracks": "0",
-        "ccdb-url": "http:\/\/alice-ccdb.cern.ch",
-        "grpPath": "GLO\/GRP\/GRP",
-        "grpmagPath": "GLO\/Config\/GRPMagField",
-        "lutPath": "GLO\/Param\/MatLUT",
-        "geoPath": "GLO\/Config\/GeometryAligned",
-        "processRun2": "false",
-        "processRun3": "true"
+    "cascade-preselector": {
+        "dIfMCgenerateXiMinus": "true",
+        "dIfMCgenerateXiPlus": "true",
+        "dIfMCgenerateOmegaMinus": "true",
+        "dIfMCgenerateOmegaPlus": "true",
+        "ddEdxPreSelectXiMinus": "true",
+        "ddEdxPreSelectXiPlus": "true",
+        "ddEdxPreSelectOmegaMinus": "true",
+        "ddEdxPreSelectOmegaPlus": "true",
+        "ddEdxPreSelectionWindow": "7",
+        "processBuildAll": "true",
+        "processBuildMCAssociated": "false",
+        "processBuildValiddEdx": "false",
+        "processBuildValiddEdxMCAssociated": "false"
     },
     "cascade-builder": {
-        "d_bz": "-999",
-        "d_UseAbsDCA": "true",
         "d_UseWeightedPCA": "false",
-        "useMatCorrType": "0",
-        "mincrossedrows": "-1",
-        "dcav0topv": "0.01",
-        "cospaV0": "0.9",
-        "lambdamasswindow": "0.02",
-        "dcav0dau": "5",
-        "dcanegtopv": "0.01",
-        "dcapostopv": "0.01",
-        "dcabachtopv": "0.01",
-        "tpcrefit": "false",
-        "v0radius": "0.9",
-        "ccdb-url": "http:\/\/alice-ccdb.cern.ch",
-        "grpPath": "GLO\/GRP\/GRP",
-        "grpmagPath": "GLO\/Config\/GRPMagField",
-        "lutPath": "GLO\/Param\/MatLUT",
-        "geoPath": "GLO\/Config\/GeometryAligned",
         "processRun2": "false",
         "processRun3": "true"
     },
     "lambdakzero-label-builder": {
         "processDoNotBuildLabels": "true",
-        "processBuildLabels": "false"
-    },
-    "singlestrange-label-builder": {
-        "processDoNotBuildLabels": "true",
         "processBuildV0Labels": "false"
     },
-    "multistrange-label-builder": {
-        "processDoNotBuildLabels": "true",
-        "processBuildCascadeLabels": "false"
-    },
-    "lambdakzero-analysis-mc": {
-        "dca-binning": {
-            "values": [
-                "200",
-                "0",
-                "1"
-            ]
-        },
-        "pt-binning": {
-            "values": [
-                "200",
-                "0",
-                "10"
-            ]
-        },
-        "K0S-mass-binning": {
-            "values": [
-                "400",
-                "0.4",
-                "0.6"
-            ]
-        },
-        "Lambda-mass-binning": {
-            "values": [
-                "200",
-                "1.015",
-                "1.215"
-            ]
-        },
-        "v0cospa": "0.995",
-        "dcav0dau": "1",
-        "dcanegtopv": "0.1",
-        "dcapostopv": "0.1",
-        "v0radius": "5",
-        "rapidity": "0.5",
-        "saveDcaHist": "0",
-        "TpcPidNsigmaCut": "5",
-        "boolArmenterosCut": "true",
-        "paramArmenterosCut": "0.2",
-        "event_sel8_selection": "true",
-        "event_posZ_selection": "true",
-        "lifetimecut": {
-            "labels_rows": "",
-            "labels_cols": [
-                "lifetimecutLambda",
-                "lifetimecutK0S"
-            ],
-            "values": [
-                [
-                    "25",
-                    "20"
-                ]
-            ]
-        },
-        "processRun3": "true",
-        "processRun2": "false"
-    },
-    "cascade-label-builder": {
-        "processDoNotBuildLabels": "true",
-        "processBuildLabels": "false"
-    },
-    "cascade-analysis-m-c": {
-        "v0cospa": "0.95",
-        "casccospa": "0.95",
-        "dcav0dau": "2",
-        "dcacascdau": "1",
-        "dcanegtopv": "0.05",
-        "dcapostopv": "0.05",
-        "dcabachtopv": "0.05",
-        "dcav0topv": "0.05",
-        "v0radius": "0.9",
-        "cascradius": "0.5",
-        "v0masswindow": "0.008",
-        "eventSelection": "true",
-        "tpcClusters": "70",
-        "itsClusters": "4",
-        "allowITSSAbachelor": "true",
-        "allowITSSAproton": "true",
-        "allowITSSApion": "false",
-        "assocMC": "true",
+    "cascade-analysis": {
         "tpcNsigmaBachelor": "4",
         "tpcNsigmaProton": "4",
         "tpcNsigmaPion": "4",
-        "doCentralityStudy": "false",
         "processRun3": "true",
         "processRun2": "false",
         "processRun3VsMultiplicity": "false",
@@ -257,7 +104,8 @@
         "processRun3VsMultiplicityWithPID": "false",
         "processRun2VsMultiplicityWithPID": "false"
     },
-    "cascade-qa-m-c": {
-        "assocMC": "true"
+    "cascade-label-builder": {
+        "processDoNotBuildLabels": "true",
+        "processBuildCascadeLabels": "false"
     }
 }
