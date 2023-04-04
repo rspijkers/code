@@ -25,10 +25,10 @@ fi
 # TODO: check if we are on local or stbc by bash command `hostname`, select the correct filelist based on this info
 FOLDER="local"
 HOST=`hostname`
-if [ $HOST == stbc* ]; then # it seems we are on one of the stbc nodes at nikhef
+if [ "$HOST" == stbc* ]; then # it seems we are on one of the stbc nodes at nikhef
     echo "we are on stbc"
     FOLDER="stbc"
-elif [ $HOST == fiora ]; then
+elif [ "$HOST" == fiora ]; then
     echo "you are on the Nikhef login server, don't run O2 here!!"
     exit
 fi
