@@ -1,0 +1,47 @@
+{
+    "internal-dpl-clock": "",
+    "ctf-reader": {
+        "select-ctf-ids": "",
+        "impose-run-start-timstamp": "0",
+        "local-tf-counter": "false",
+        "fetch-failure-threshold": "0",
+        "orbit-offset-enumeration": "0",
+        "orbit-multiplier-enumeration": "0",
+        "start-value-enumeration": "0",
+        "end-value-enumeration": "-1",
+        "step-value-enumeration": "1"
+    },
+    "internal-dpl-ccdb-backend": {
+        "condition-backend": "http:\/\/alice-ccdb.cern.ch",
+        "condition-not-before": "0",
+        "condition-not-after": "3385078236000",
+        "condition-remap": "",
+        "condition-tf-per-query": "0",
+        "condition-time-tolerance": "5000",
+        "orbit-offset-enumeration": "0",
+        "orbit-multiplier-enumeration": "0",
+        "start-value-enumeration": "0",
+        "end-value-enumeration": "-1",
+        "step-value-enumeration": "1"
+    },
+    "its-entropy-decoder": {
+        "ctf-dict": "ccdb",
+        "mask-noise": "false",
+        "ignore-cluster-dictionary": "false",
+        "condition-backend": "http:\/\/alice-ccdb.cern.ch",
+        "condition-timestamp": "0"
+    },
+    "Dispatcher": {
+        "period-timer-stats": "10000000"
+    },
+    "qc-task-ITS-ITSClusterTask": {
+        "period-timer-cycle": "180000000",
+        "qcConfiguration": "",
+        "condition-backend": "http:\/\/alice-ccdb.cern.ch",
+        "condition-timestamp": "0"
+    },
+    "qc-check-ITS-ITSClusterCheck": {
+        "qcConfiguration": ""
+    },
+    "internal-dpl-injected-dummy-sink": ""
+}

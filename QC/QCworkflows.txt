@@ -1,0 +1,31 @@
+# alienv enter QualityControl/latest
+
+### Basic workflows to process clusters from TF: ###
+
+o2-raw-tf-reader-workflow -b --delay 0.2 --input-data 531781_red.dat --max-tf -5 --onlyDet ITS --shm-segment-size 30000000000 | \
+o2-itsmft-stf-decoder-workflow -b --nthreads 5 | \
+o2-qc -b --config json:///home/its/iravasen/QualityControl/Modules/ITS/itsCluster.json --run | tee tracklog.log
+
+### Basic workflows to process clusters from CTF: ###
+
+o2-ctf-reader-workflow -b --onlyDet ITS --ctf-input 529310.dat --remote-regex "^alien:///alice/data/.+" --copy-cmd no-copy --delay 1 --shm-segment-size 30000000000 | \
+o2-qc -b --config json:///home/its/iravasen/QualityControl/Modules/ITS/itsCluster.json --run | tee tracklog.log
+
+### Basic workflow to process tracks from TF: ###
+
+o2-raw-tf-reader-workflow -b --delay 0.2 --input-data 531781_red.dat --max-tf -5 --onlyDet ITS --shm-segment-size 30000000000 | \
+o2-itsmft-stf-decoder-workflow -b --nthreads 5 | \
+o2-its-reco-workflow -b  --clusters-from-upstream --disable-mc --trackerCA --tracking-mode async --configKeyValues "fastMultConfig.cutMultClusLow=-1;fastMultConfig.cutMultClusHigh=-1;fastMultConfig.cutMultVtxHigh=-1;ITSVertexerParam.phiCut=0.5;ITSVertexerParam.clusterContributorsCut=3;ITSVertexerParam.tanLambdaCut=0.2;" | \
+o2-qc -b --config json:///home/its/iravasen/QualityControl/Modules/ITS/itsTrack.json --run | tee tracklog.log
+
+### Basic workflow to process tracks from CTF: ###
+
+o2-ctf-reader-workflow -b --onlyDet ITS --ctf-input 529310.dat --remote-regex "^alien:///alice/data/.+" --copy-cmd no-copy --delay 1 --shm-segment-size 30000000000 | \
+o2-its-reco-workflow -b  --clusters-from-upstream --disable-mc --trackerCA --tracking-mode async --configKeyValues "fastMultConfig.cutMultClusLow=-1;fastMultConfig.cutMultClusHigh=-1;fastMultConfig.cutMultVtxHigh=-1;ITSVertexerParam.phiCut=0.5;ITSVertexerParam.clusterContributorsCut=3;ITSVertexerParam.tanLambdaCut=0.2;" | \
+o2-qc -b --config json:///home/its/iravasen/QualityControl/Modules/ITS/itsTrack.json --run | tee tracklog.log
+
+### TEMP COPY PASTE: ### 
+
+o2-ctf-reader-workflow -b --onlyDet ITS --ctf-input alien:///alice/data/2022/LHC22o/527228/raw/0440/o2_ctf_run00527228_orbit0001131264_tf0000002669_epn011.root --remote-regex "^alien:///alice/data/.+" --copy-cmd no-copy --delay 1 --shm-segment-size 8000000000 | \
+o2-its-reco-workflow -b  --clusters-from-upstream --disable-mc --trackerCA --tracking-mode async --configKeyValues "fastMultConfig.cutMultClusLow=-1;fastMultConfig.cutMultClusHigh=-1;fastMultConfig.cutMultVtxHigh=-1;ITSVertexerParam.phiCut=0.5;ITSVertexerParam.clusterContributorsCut=3;ITSVertexerParam.tanLambdaCut=0.2;" | \
+o2-qc -b --config json:///home/rik/alice/QualityControl/Modules/ITS/itsTrack.json --run | tee tracklog.log
