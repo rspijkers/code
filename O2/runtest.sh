@@ -25,23 +25,24 @@ fi
 # TODO: check if we are on local or stbc by bash command `hostname`, select the correct filelist based on this info
 FOLDER="local"
 HOST=`hostname`
-if [ "$HOST" == stbc* ]; then # it seems we are on one of the stbc nodes at nikhef
+if [[ "$HOST" == stbc* ]]; then # it seems we are on one of the stbc nodes at nikhef
     echo "we are on stbc"
     FOLDER="stbc"
-elif [ "$HOST" == fiora ]; then
+elif [[ "$HOST" == fiora ]]; then
     echo "you are on the Nikhef login server, don't run O2 here!!"
     exit
 fi
 # if we are not on stbc or fiora, assume we are running locally
-FILELIST=$FOLDER/LHC22t_apass3.txt
+FILELIST=$FOLDER/LHC22t_apass3_1.txt
 
 # define the config so we can conveniently pass it to each workflow
 CONFIG="-b --configuration json://ssbarconfig.json" # -b means no debug gui
 
 echo "hey it seems we are about to execute the workflow, cool!"
 # execute the entire workflow
-o2-analysis-timestamp $CONFIG | o2-analysis-track-propagation $CONFIG | o2-analysis-event-selection $CONFIG | o2-analysis-multiplicity-table $CONFIG | o2-analysis-pid-tpc-base $CONFIG | o2-analysis-pid-tpc $CONFIG | o2-analysis-lf-lambdakzerobuilder $CONFIG | o2-analysis-lf-cascadebuilder $CONFIG | o2-analysis-lf-cascadeanalysis $CONFIG | o2-analysis-lf-strangecorrelations $CONFIG --aod-file alien:///alice/data/2022/LHC22t/529552/apass3/0800/o2_ctf_run00529552_orbit0007634688_tf0000009151_epn134/001/AO2D.root > log_o2.txt
+o2-analysis-zdc-converter $CONFIG | o2-analysis-timestamp $CONFIG | o2-analysis-track-propagation $CONFIG | o2-analysis-event-selection $CONFIG | o2-analysis-multiplicity-table $CONFIG | o2-analysis-pid-tpc-base $CONFIG | o2-analysis-pid-tpc $CONFIG | o2-analysis-lf-lambdakzerobuilder $CONFIG | o2-analysis-lf-cascadebuilder $CONFIG | o2-analysis-lf-cascadeanalysis $CONFIG | o2-analysis-lf-cascadecorrelations $CONFIG --aod-file @$FILELIST > log_o2.txt
 # sometimes you may need this workflow: o2-analysis-collision-converter $CONFIG | 
+# when runnin on older stuff maybe add this: o2-analysis-zdc-converter 
 
 # for running on file on alien, use alien:///alice/data/2022/LHC22t/529552/apass3/0800/o2_ctf_run00529552_orbit0007634688_tf0000009151_epn134/001/AO2D.root
 

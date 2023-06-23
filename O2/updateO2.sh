@@ -1,3 +1,5 @@
+# make some documentation here?
+
 # check if we need to build only one executable, or all executables in a directory:
 while getopts ":d:e:" option; do
     case $option in
