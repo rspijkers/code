@@ -1,0 +1,28 @@
+These are steps designed to rebase your own O2Physics developments on top of the master updates. 
+Replace "rspijkers" with your git username, and "strangecorr" with the name of your local branch.
+
+WARNING: DON'T BLINDLY FOLLOW THESE COMMANDS, THEY CAN FUCK UP YOUR REPOSITORY BEYOND REPAIR!!!
+
+// go to your O2Physics directory
+// commit or checkout any local changes
+git fetch upstream master:master
+git pull --rebase upstream master
+// resolve merge conflicts, usually accept current (this is the master branch)
+// only accept incoming if you're sure!
+
+// optional: force push the updated branch to your github remote
+git push --force rspijkers strangecorr
+// username rspijkers, password is git stbc token (bitwarden)
+
+// optional: only if you want to update alidist
+cd ../alidist 
+git pull --rebase
+
+cd .. (go to alice dir)
+// do tmux if you want to build on stbc
+buildo2 (alias for [nice -20] aliBuild build O2Physics.....)
+
+if you want to git pull your updated branch somewhere else after such a rebase, do the following:
+// WARNING! THIS WILL OVERWRITE ALL LOCAL CHANGES!!!
+git fetch rspijkers
+git reset --hard rspijkers/strangecorr

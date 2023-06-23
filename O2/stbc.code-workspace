@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../../data/alice/rspijker/alice/O2Physics"
+		},
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.inc": "cpp"
+		}
+	}
+}
