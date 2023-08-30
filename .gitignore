@@ -17,3 +17,11 @@ CustomROOTClass/test
 /O2/imgui.ini
 /O2/test.json
 /O2/dpl-config.json
+/O2/stbc.code-workspace
+
+# QC dir ignores
+/QC/5*_investigation/
+/QC/*.dat
+/QC/*.log
+/QC/*.ini
+/QC/dpl-config.json
