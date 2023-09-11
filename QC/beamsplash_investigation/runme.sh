@@ -31,7 +31,12 @@ done < $OUTFILE
 
 # extract the time interval from the path, probably only works if there is exactly one. 
 INTERVAL=$(cut -d/ -f10 $OUTFILE)
-echo $INTERVAL
+if [[ -z "$INTERVAL" ]]; then
+    echo "No problematic files found! aborting..."
+    exit
+else
+    echo $INTERVAL
+fi
 
 # delete and make filelist again, this time with QC files per CTF
 if [[ -f "$INFILE" ]]; then
