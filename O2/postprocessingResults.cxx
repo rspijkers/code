@@ -14,18 +14,18 @@
 
 using std::cout; using std::endl;
 
-// Structure of the THnSparse:
-// 0 dPhi, 1 dEta, 2 ptTrigger, 3 ptAssoc, 4 selflagTrigger, 5 selflagAssoc, 6 V_z
-
-// more info:
-// AxisSpec invMassAxis = {3000, 0.0f, 3.0f, "Inv. Mass (GeV/c^{2})"};
-// AxisSpec deltaPhiAxis = {100, -PI / 2, 1.5  *PI, "#Delta#varphi"};
-// AxisSpec deltaEtaAxis = {40, -2, 2, "#Delta#eta"};
-// AxisSpec ptAxis = {200, 0, 15, "#it{p}_{T}"};
-// AxisSpec selectionFlagAxis = {4, -0.05f, 3.5f, "Selection flag of casc candidate"};
-// AxisSpec vertexAxis = {1000, -10.0f, 10.0f, "cm"};
-
-// TODO: make project function that takes THnSparse, target axis, and range of any other axis/axes
+// enum for axisnumbers/names, in- or outside main()?
+enum {
+  dPhi, 
+  dEta, 
+  ptTrigg, 
+  ptAssoc, 
+  invMassTrigg, 
+  invMassAssoc, 
+  selflagTrigg, 
+  selflagAssoc, 
+  V_z
+}; // for more info on the THnSparse see O2 task: PWGLF/Tasks/cascadecorrelations.cxx
 
 // Wrapper for lower and upper bounds
 using axranges = std::map<int, std::vector<double>>;
@@ -85,57 +85,50 @@ int postprocessingResults(const char *filename) {
   dir->GetObject("hSparseOS", hSparseOS);
 
   // projection configurations
-
-  // TODO FIX THE SELECTIONFLAG MESS
-  double bin0 = -0.05;
-  double bin1 = -0.05+0.8875;
-  double bin2 = -0.05+2*0.8875;
-  double bin3 = -0.05+3*0.8875;
-
-  axranges xiLow{{2, {0.15, 4.0}}, {3, {0.15, 15.0}}, {4, {bin1, bin2}}, {5, {bin1, bin2}}};
-  axranges xiMed{{2, {4.0, 8.0}},  {3, {0.15, 15.0}}, {4, {bin1, bin2}}, {5, {bin1, bin2}}};
-  axranges xiHig{{2, {8.0, 15.0}}, {3, {0.15, 15.0}}, {4, {bin1, bin2}}, {5, {bin1, bin2}}};
-  axranges xiOmega{{4, {bin1, bin2}}, {5, {bin2, bin3}}};
-  axranges omegaXi{{4, {bin2, bin3}}, {5, {bin1, bin2}}};
-  axranges omegaOmega{{4, {bin2, bin3}}, {5, {bin2, bin3}}};
+  axranges xiLow{{ptTrigg, {0.15, 4.0}}, {ptAssoc, {0.15, 15.0}}, {selflagTrigg, {0.5, 1.5}}, {selflagAssoc, {0.5, 1.5}}};
+  axranges xiMed{{ptTrigg, {4.0, 8.0}},  {ptAssoc, {0.15, 15.0}}, {selflagTrigg, {0.5, 1.5}}, {selflagAssoc, {0.5, 1.5}}};
+  axranges xiHig{{ptTrigg, {8.0, 15.0}}, {ptAssoc, {0.15, 15.0}}, {selflagTrigg, {0.5, 1.5}}, {selflagAssoc, {0.5, 1.5}}};
+  axranges xiOmega{{selflagTrigg, {0.5, 1.5}}, {selflagAssoc, {1.5, 2.5}}};
+  axranges omegaXi{{selflagTrigg, {1.5, 2.5}}, {selflagAssoc, {0.5, 1.5}}};
+  axranges omegaOmega{{selflagTrigg, {1.5, 2.5}}, {selflagAssoc, {1.5, 2.5}}};
 
   // OS
-  TH1D *hdphiLowOS = project(hSparseOS, 0, xiLow);
+  TH1D *hdphiLowOS = project(hSparseOS, dPhi, xiLow);
   hdphiLowOS->SetName("hdphiLowOS");
   hdphiLowOS->Draw();
-  TH1D *hdphiMedOS = project(hSparseOS, 0, xiMed);
+  TH1D *hdphiMedOS = project(hSparseOS, dPhi, xiMed);
   hdphiMedOS->SetName("hdphiMedOS");
   hdphiMedOS->Draw();
-  TH1D *hdphiHigOS = project(hSparseOS, 0, xiHig);
+  TH1D *hdphiHigOS = project(hSparseOS, dPhi, xiHig);
   hdphiHigOS->SetName("hdphiHigOS");
   hdphiHigOS->Draw();
-  TH1D *hdphiXiOmOS = project(hSparseOS, 0, xiOmega);
+  TH1D *hdphiXiOmOS = project(hSparseOS, dPhi, xiOmega);
   hdphiXiOmOS->SetName("hdphiXiOmOS");
   hdphiXiOmOS->Draw();
-  TH1D *hdphiOmXiOS = project(hSparseOS, 0, omegaXi);
+  TH1D *hdphiOmXiOS = project(hSparseOS, dPhi, omegaXi);
   hdphiOmXiOS->SetName("hdphiOmXiOS");
   hdphiOmXiOS->Draw();
-  TH1D *hdphiOmOmOS = project(hSparseOS, 0, omegaOmega);
+  TH1D *hdphiOmOmOS = project(hSparseOS, dPhi, omegaOmega);
   hdphiOmOmOS->SetName("hdphiOmOmOS");
   hdphiOmOmOS->Draw();
 
   // SS
-  TH1D *hdphiLowSS = project(hSparseSS, 0, xiLow);
+  TH1D *hdphiLowSS = project(hSparseSS, dPhi, xiLow);
   hdphiLowSS->SetName("hdphiLowSS");
   hdphiLowSS->Draw();
-  TH1D *hdphiMedSS = project(hSparseSS, 0, xiMed);
+  TH1D *hdphiMedSS = project(hSparseSS, dPhi, xiMed);
   hdphiMedSS->SetName("hdphiMedSS");
   hdphiMedSS->Draw();
-  TH1D *hdphiHigSS = project(hSparseSS, 0, xiHig);
+  TH1D *hdphiHigSS = project(hSparseSS, dPhi, xiHig);
   hdphiHigSS->SetName("hdphiHigSS");
   hdphiHigSS->Draw();
-  TH1D *hdphiXiOmSS = project(hSparseSS, 0, xiOmega);
+  TH1D *hdphiXiOmSS = project(hSparseSS, dPhi, xiOmega);
   hdphiXiOmSS->SetName("hdphiXiOmSS");
   hdphiXiOmSS->Draw();
-  TH1D *hdphiOmXiSS = project(hSparseSS, 0, omegaXi);
+  TH1D *hdphiOmXiSS = project(hSparseSS, dPhi, omegaXi);
   hdphiOmXiSS->SetName("hdphiOmXiSS");
   hdphiOmXiSS->Draw();
-  TH1D *hdphiOmOmSS = project(hSparseSS, 0, omegaOmega);
+  TH1D *hdphiOmOmSS = project(hSparseSS, dPhi, omegaOmega);
   hdphiOmOmSS->SetName("hdphiOmOmSS");
   hdphiOmOmSS->Draw();
 
