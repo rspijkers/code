@@ -22,7 +22,7 @@ cd $TRAINRUN
 # there is an extra nested directory
 NEST=`alien_ls /alice/cern.ch/user/a/alihyperloop/outputs/$TRAINRUN`
 
-alien_cp alien:/alice/cern.ch/user/a/alihyperloop/outputs/$TRAINRUN/$NEST/AnalysisResults.root file:./AnalisysResults.root
+alien_cp alien:/alice/cern.ch/user/a/alihyperloop/outputs/$TRAINRUN/$NEST/AnalysisResults.root file:./AnalysisResults.root
 
 ### 2 Download config, stdout from the test directory
 curl -k --cert ~/.globus/usercert.pem --cert-type PEM --key ~/.globus/userkey.pem \
@@ -34,7 +34,7 @@ https://alimonitor.cern.ch/train-workdir/tests/$TESTID/configuration.json -o con
 CURLEXIT=$?
 [[ $CURLEXIT != 0 ]] && echo curl failed with exit code $CURLEXIT!!!
 
-# check if the first line of the json file starts with a '}', if not then curl probably downloaded the text of a 404 error...
+# check if the first line of the json file starts with a '{', if not then curl probably downloaded the text of a 404 error...
 JSONCHECK=$(head -n 1 dpl-config.json)
 [[ $JSONCHECK != "{" ]] && echo "WARNING!! The first line of 'dpl-config.json' is not '{', you've probably just downloaded the text of a 404 error..."
 # this check can probably be nicer, using grep 404 or something...
