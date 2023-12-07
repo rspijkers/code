@@ -7,6 +7,7 @@
         "isRun2MC": "false"
     },
     "bc-selection-task": {
+        "triggerBcShift": "999",
         "processRun2": "false",
         "processRun3": "true"
     },
@@ -17,27 +18,33 @@
         "dIfMCgenerateGamma": "false",
         "dIfMCgenerateHypertriton": "false",
         "dIfMCgenerateAntiHypertriton": "false",
-        "ddEdxPreSelectK0Short": "true",
+        "dIfMCselectV0MotherPDG": "0",
+        "dIfMCselectPhysicalPrimary": "true",
+        "ddEdxPreSelectK0Short": "false",
         "ddEdxPreSelectLambda": "true",
         "ddEdxPreSelectAntiLambda": "true",
         "ddEdxPreSelectGamma": "false",
         "ddEdxPreSelectHypertriton": "false",
         "ddEdxPreSelectAntiHypertriton": "false",
         "ddEdxPreSelectionWindow": "7",
+        "dTPCNCrossedRows": "50",
+        "dPreselectOnlyBaryons": "false",
         "processBuildAll": "true",
         "processBuildMCAssociated": "false",
         "processBuildValiddEdx": "false",
-        "processBuildValiddEdxMCAssociated": "false"
+        "processBuildValiddEdxMCAssociated": "false",
+        "processSkipV0sNotUsedInCascades" : "true"
     },
     "lambdakzero-builder": {
         "d_UseWeightedPCA": "false",
+        "d_UseAutodetectMode": "true",
         "processRun2": "false",
         "processRun3": "true"
     },
     "event-selection-task": {
         "syst": "pp",
         "muonSelection": "0",
-        "customDeltaBC": "300",
+        "customDeltaBC": "-1",
         "isMC": "false",
         "processRun2": "false",
         "processRun3": "true"
@@ -45,18 +52,46 @@
     "multiplicity-table": {
         "doVertexZeq": "1",
         "processRun2": "false",
-        "processRun3": "true"
+        "processRun3": "true", 
+        "fractionOfEvents" : "2", 
+        "populateMultExtra" : "0"
     },
     "tpc-pid": {
         "param-file": "",
         "ccdb-url": "http:\/\/alice-ccdb.cern.ch",
         "ccdbPath": "Analysis\/PID\/TPC\/Response",
+        "recoPass": "",
         "ccdb-timestamp": "0",
         "useNetworkCorrection": "false",
         "autofetchNetworks": "true",
+        "skipTPCOnly": "true",
         "networkPathLocally": "network.onnx",
         "enableNetworkOptimizations": "true",
         "networkPathCCDB": "Analysis\/PID\/TPC\/ML",
+        "networkSetNumThreads": "0",
+        "pid-el": "-1",
+        "pid-mu": "-1",
+        "pid-pi": "-1",
+        "pid-ka": "-1",
+        "pid-pr": "-1",
+        "pid-de": "-1",
+        "pid-tr": "-1",
+        "pid-he": "-1",
+        "pid-al": "-1"
+    },
+    "tpc-pid-full": {
+        "param-file": "",
+        "ccdb-url": "http:\/\/alice-ccdb.cern.ch",
+        "ccdbPath": "Analysis\/PID\/TPC\/Response",
+        "recoPass": "",
+        "ccdb-timestamp": "0",
+        "useNetworkCorrection": "false",
+        "autofetchNetworks": "true",
+        "skipTPCOnly": "true",
+        "networkPathLocally": "network.onnx",
+        "networkPathCCDB": "Analysis\/PID\/TPC\/ML",
+        "enableNetworkOptimizations": "true",
+        "networkSetNumThreads": "0",
         "pid-el": "-1",
         "pid-mu": "-1",
         "pid-pi": "-1",
@@ -72,11 +107,15 @@
         "dIfMCgenerateXiPlus": "true",
         "dIfMCgenerateOmegaMinus": "true",
         "dIfMCgenerateOmegaPlus": "true",
+        "dIfMCselectV0MotherPDG": "0",
+        "dIfMCselectPhysicalPrimary": "true",
         "ddEdxPreSelectXiMinus": "true",
         "ddEdxPreSelectXiPlus": "true",
         "ddEdxPreSelectOmegaMinus": "true",
         "ddEdxPreSelectOmegaPlus": "true",
         "ddEdxPreSelectionWindow": "7",
+        "dTPCNCrossedRows": "50",
+        "dPreselectOnlyBaryons": "false",
         "processBuildAll": "true",
         "processBuildMCAssociated": "false",
         "processBuildValiddEdx": "false",
@@ -84,6 +123,7 @@
     },
     "cascade-builder": {
         "d_UseWeightedPCA": "false",
+        "d_UseAutodetectMode": "true",
         "processRun2": "false",
         "processRun3": "true"
     },
@@ -104,8 +144,22 @@
         "processRun3VsMultiplicityWithPID": "false",
         "processRun2VsMultiplicityWithPID": "false"
     },
-    "cascade-label-builder": {
-        "processDoNotBuildLabels": "true",
-        "processBuildCascadeLabels": "false"
+    "cascade-selector": {
+        "tpcNsigmaBachelor": "3",
+        "tpcNsigmaProton": "3",
+        "tpcNsigmaPion": "3",
+        "minTPCCrossedRows": "80",
+        "minITSClusters": "0",
+        "v0setting_cospa": "0.99499999999999996",
+        "v0setting_dcav0dau": "1",
+        "v0setting_dcapostopv": "0.100000001",
+        "v0setting_dcanegtopv": "0.100000001",
+        "v0setting_radius": "0.899999976",
+        "cascadesetting_cospa": "0.94999999999999996",
+        "cascadesetting_dcacascdau": "1",
+        "cascadesetting_dcabachtopv": "0.05",
+        "cascadesetting_cascradius": "0.9",
+        "cascadesetting_v0masswindow": "0.00999999978",
+        "cascadesetting_mindcav0topv": "0.00999999978"
     }
 }
