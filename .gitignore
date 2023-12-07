@@ -25,3 +25,4 @@ CustomROOTClass/test
 /QC/*.log
 /QC/*.ini
 /QC/dpl-config.json
+/QC/filelist.dat
