@@ -40,7 +40,7 @@ CONFIG="-b --configuration json://ssbarconfig.json" # -b means no debug gui
 
 echo "hey it seems we are about to execute the workflow, cool!"
 # execute the entire workflow
-o2-analysis-zdc-converter $CONFIG | o2-analysis-bc-converter $CONFIG | o2-analysis-tracks-extra-converter $CONFIG | \
+o2-analysis-zdc-converter $CONFIG | o2-analysis-bc-converter $CONFIG | o2-analysis-tracks-extra-converter $CONFIG | o2-analysis-v0converter $CONFIG | \
 o2-analysis-timestamp $CONFIG | o2-analysis-track-propagation $CONFIG | o2-analysis-event-selection $CONFIG | o2-analysis-multiplicity-table $CONFIG | \
 o2-analysis-pid-tpc-base $CONFIG | o2-analysis-pid-tpc $CONFIG | \
 o2-analysis-lf-lambdakzerobuilder $CONFIG | o2-analysis-lf-cascadebuilder $CONFIG | \
@@ -49,6 +49,7 @@ o2-analysis-lf-cascadecorrelations $CONFIG --aod-file @$FILELIST > log_o2.txt
 # when running on older stuff maybe add this: o2-analysis-zdc-converter $CONFIG | 
 # when running on older data use (before September 2023?): o2-analysis-bc-converter $CONFIG | 
 # when running on older data use (before November 2023?): o2-analysis-tracks-extra-converter $CONFIG | 
+# when running on older data use (before December 2023?): o2-analysis-v0converter $CONFIG | 
 
 # for running on file on alien, use alien:///alice/data/2022/LHC22t/529552/apass3/0800/o2_ctf_run00529552_orbit0007634688_tf0000009151_epn134/001/AO2D.root
 
