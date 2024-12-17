@@ -13,6 +13,10 @@ TESTID=00$DIGITS/00$TRAINRUN
 
 # make sure we are in the right directory...
 cd /user/rspijker/project/code/O2/results
+if [ $? -ne 0 ]; then
+    echo "Changing directory failed, exiting program!";
+    exit;
+fi
 
 # make and enter the relevant dir
 [ ! -d "$TRAINRUN" ] && mkdir $TRAINRUN
@@ -20,9 +24,10 @@ cd $TRAINRUN
 
 ### 1 Download the full merged output AnalysisResults.root
 # there is an extra nested directory
-NEST=`alien_ls /alice/cern.ch/user/a/alihyperloop/outputs/$TRAINRUN`
+# NEST=`alien_ls /alice/cern.ch/user/a/alihyperloop/outputs/00$DIGITS/$TRAINRUN`
+NEST=`alien_ls /alice/cern.ch/user/a/alihyperloop/outputs/00$DIGITS/$TRAINRUN | sort -r | head -n 1`
 
-alien_cp alien:/alice/cern.ch/user/a/alihyperloop/outputs/$TRAINRUN/$NEST/AnalysisResults.root file:./AnalysisResults.root
+alien_cp alien:/alice/cern.ch/user/a/alihyperloop/outputs/00$DIGITS/$TRAINRUN/${NEST}AnalysisResults.root file:./AnalysisResults.root
 
 ### 2 Download config, stdout from the test directory
 curl -k --cert ~/.globus/usercert.pem --cert-type PEM --key ~/.globus/userkey.pem \
@@ -37,4 +42,3 @@ CURLEXIT=$?
 # check if the first line of the json file starts with a '{', if not then curl probably downloaded the text of a 404 error...
 JSONCHECK=$(head -n 1 dpl-config.json)
 [[ $JSONCHECK != "{" ]] && echo "WARNING!! The first line of 'dpl-config.json' is not '{', you've probably just downloaded the text of a 404 error..."
-# this check can probably be nicer, using grep 404 or something...
