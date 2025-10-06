@@ -90,7 +90,6 @@ int MCClosure(TString trainnr, TString filename = "AnalysisResults.root", bool m
   inputDir->GetObject("MC/hMCMinusPlus", hMCMinusPlus);
   cout << hMCMinusMinus->GetAxis(1)->GetXmin() << endl;
 
-  // get normalization from efficiency
   TH2F *hXiMinGen, *hXiPlusGen;
   inputFile->GetObject("cascade-selector/gen/hXiMinus", hXiMinGen);
   inputFile->GetObject("cascade-selector/gen/hXiPlus", hXiPlusGen);
@@ -107,51 +106,69 @@ int MCClosure(TString trainnr, TString filename = "AnalysisResults.root", bool m
   TH1D* hPlusMinus = project(hMCPlusMinus, mc::dPhi, aMC);
   hPlusMinus->SetName("hPlusMinus");
   hPlusMinus->SetTitle("#Xi^{+} - #Xi^{-} correlations");
+  hPlusMinus->Rebin(9);
   hPlusMinus->Scale(20. / (2 * M_PI)); // scale by bin width for correct dN/d(dphi)
   hPlusMinus->Scale(1./nXiPlus);
-  hPlusMinus->Rebin(9);
   TH1D* hPlusPlus = project(hMCPlusPlus, mc::dPhi, aMC);
   hPlusPlus->SetName("hPlusPlus");
   hPlusPlus->SetTitle("#Xi^{+} - #Xi^{+} correlations");
+  hPlusPlus->Rebin(9);
   hPlusPlus->Scale(20. / (2 * M_PI)); // scale by bin width for correct dN/d(dphi)
   hPlusPlus->Scale(1./nXiPlus);
-  hPlusPlus->Rebin(9);
   TH1D* hMinusPlus = project(hMCMinusPlus, mc::dPhi, aMC);
   hMinusPlus->SetName("hMinusPlus");
   hMinusPlus->SetTitle("#Xi^{-} - #Xi^{+} correlations");
+  hMinusPlus->Rebin(9);
   hMinusPlus->Scale(20. / (2 * M_PI)); // scale by bin width for correct dN/d(dphi)
   hMinusPlus->Scale(1./nXiMin);
-  hMinusPlus->Rebin(9);
   TH1D* hMinusMinus = project(hMCMinusMinus, mc::dPhi, aMC);
   hMinusMinus->SetName("hMinusMinus");
   hMinusMinus->SetTitle("#Xi^{-} - #Xi^{-} correlations");
+  hMinusMinus->Rebin(9);
   hMinusMinus->Scale(20. / (2 * M_PI)); // scale by bin width for correct dN/d(dphi)
   hMinusMinus->Scale(1./nXiMin);
-  hMinusMinus->Rebin(9);
 
   // DeltaRapidity
   TH1D* hRapidityMinusPlus = project(hMCMinusPlus, mc::dY, aMC);
   hRapidityMinusPlus->SetName("hRapidityMinusPlus");
   hRapidityMinusPlus->SetTitle("#Xi^{-} - #Xi^{+} correlations #Delta y");
+  hRapidityMinusPlus->Scale(1./nXiMin);
+  hRapidityMinusPlus->Scale(10);
   TH1D* hRapidityMinusMinus = project(hMCMinusMinus, mc::dY, aMC);
   hRapidityMinusMinus->SetName("hRapidityMinusMinus");
   hRapidityMinusMinus->SetTitle("#Xi^{-} - #Xi^{-} correlations #Delta y");
+  hRapidityMinusMinus->Scale(1./nXiMin);
+  hRapidityMinusMinus->Scale(10);
   TH1D* hRapidityPlusMinus = project(hMCPlusMinus, mc::dY, aMC);
   hRapidityPlusMinus->SetName("hRapidityPlusMinus");
   hRapidityPlusMinus->SetTitle("#Xi^{+} - #Xi^{-} correlations #Delta y");
+  hRapidityPlusMinus->Scale(1./nXiPlus);
+  hRapidityPlusMinus->Scale(10);
   TH1D* hRapidityPlusPlus = project(hMCPlusPlus, mc::dY, aMC);
   hRapidityPlusPlus->SetName("hRapidityPlusPlus");
   hRapidityPlusPlus->SetTitle("#Xi^{+} - #Xi^{+} correlations #Delta y");
+  hRapidityPlusPlus->Scale(1./nXiPlus);
+  hRapidityPlusPlus->Scale(10);
 
-  TH1D* hPlusSubtracted = new TH1D(*hPlusMinus);
-  hPlusSubtracted->SetName("hPlusSubtracted");
-  hPlusSubtracted->Add(hPlusMinus, hPlusPlus, 1, -1);
-  TH1D* hMinusSubtracted = new TH1D(*hPlusMinus);
-  hMinusSubtracted->SetName("hMinusSubtracted");
-  hMinusSubtracted->Add(hMinusPlus, hMinusMinus, 1, -1);
-  TH1D* hAveraged = new TH1D(*hPlusMinus);
-  hAveraged->SetName("hAveraged");
-  hAveraged->Add(hPlusSubtracted, hMinusSubtracted, .5, .5);
+  // TH1D* hPlusSubtracted = new TH1D(*hPlusMinus);
+  // hPlusSubtracted->SetName("hPlusSubtracted");
+  // hPlusSubtracted->Add(hPlusMinus, hPlusPlus, 1, -1);
+  // TH1D* hMinusSubtracted = new TH1D(*hPlusMinus);
+  // hMinusSubtracted->SetName("hMinusSubtracted");
+  // hMinusSubtracted->Add(hMinusPlus, hMinusMinus, 1, -1);
+  // TH1D* hAveraged = new TH1D(*hPlusMinus);
+  // hAveraged->SetName("hAveraged");
+  // hAveraged->Add(hPlusSubtracted, hMinusSubtracted, .5, .5);
+
+  TH1D* hOS = new TH1D(*hPlusMinus);
+  hOS->SetName("hOS");
+  hOS->Add(hPlusMinus, hMinusPlus, .5, .5);
+  TH1D* hSS = new TH1D(*hPlusMinus);
+  hSS->SetName("hSS");
+  hSS->Add(hPlusPlus, hMinusMinus, .5, .5);
+  TH1D* hSubtracted = new TH1D(*hPlusMinus);
+  hSubtracted->SetName("hSubtracted");
+  hSubtracted->Add(hOS, hSS, 1, -1);
 
   outputFile->cd();
   outputFile->Write();

@@ -35,6 +35,8 @@ struct corr{
   enum{
     dPhi, 
     dY, 
+    signTrigg,
+    signAssoc,
     ptTrigg, 
     ptAssoc, 
     invMassTrigg, 
@@ -47,6 +49,7 @@ struct corr{
 struct mass{
   enum{
     invMass, 
+    sign,
     pT, 
     y, 
     V_z,
@@ -60,20 +63,22 @@ struct mass{
 using axranges = std::map<int, std::vector<double>>;
 
 // // pT bins corresponding to efficiency 
-// const std::vector<double> pTbins = {0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.5, 4.0, 4.5, 5.0, 6.0, 8.0, 10.0};
-// const std::vector<TString> pTlabels = {"0.4", "0.6", "0.8", "1.0", "1.2", "1.4", "1.8", "2.0", "2.2", "2.4", "2.6", "2.8", "3.0", "3.5", "4.0", "4.5", "5.0", "6.0", "8.0", "10.0"};
-// assert(pTbins.size() == pTlabels.size() && "pTbins and pTlabels have different sizes, something is wrong!");
-// const int maxPtBins = pTbins.size();
-// const double pTmin = pTbins[0];
-// const double pTmax = pTbins[maxPtBins - 1];
-
-// broader bins:
-const std::vector<double> pTbins = {0.6, 1.0, 2.0, 3.0, 5.0, 12.0};
-const std::vector<TString> pTlabels = {"0.6", "1.0", "2.0", "3.0", "5.0", "12.0"};
+const std::vector<double> pTbins = {0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.5, 4.0, 4.5, 5.0, 6.0, 8.0, 10.0};
+const std::vector<TString> pTlabels = {"0.4", "0.6", "0.8", "1.0", "1.2", "1.4", "1.8", "2.0", "2.2", "2.4", "2.6", "2.8", "3.0", "3.5", "4.0", "4.5", "5.0", "6.0", "8.0", "10.0"};
 assert(pTbins.size() == pTlabels.size() && "pTbins and pTlabels have different sizes, something is wrong!");
 const int maxPtBins = pTbins.size();
 const double pTmin = pTbins[0];
 const double pTmax = pTbins[maxPtBins - 1];
+
+// broader bins:
+// const std::vector<double> pTbins = {0.6, 1.0, 2.0, 3.0, 5.0, 12.0};
+// const std::vector<TString> pTlabels = {"0.6", "1.0", "2.0", "3.0", "5.0", "12.0"};
+// const std::vector<double> pTbins = {1.0, 10.0};
+// const std::vector<TString> pTlabels = {"1.0", "10.0"};
+// assert(pTbins.size() == pTlabels.size() && "pTbins and pTlabels have different sizes, something is wrong!");
+// const int maxPtBins = pTbins.size();
+// const double pTmin = pTbins[0];
+// const double pTmax = pTbins[maxPtBins - 1];
 
 // vectors/arrays with boundaries of signal/bkg regions of inv mass plots
 double sigXi[100][2], bkgXi[100][2]; // can't be variable length (i.e. maxPtBins - 1) so just put it to 100.
@@ -83,7 +88,6 @@ double sigOm[100][2], bkgOm[100][2]; // can't be variable length (i.e. maxPtBins
 TFile *inputFile;
 TFile *outputFile;
 TDirectory *inputDir;
-
 
 // compare with run 2
 void plotRun2(){
@@ -167,8 +171,12 @@ void getEfficiencyMaps(TString trainnr){
 //   // "Users\/r\/rspijker\/test\/Efftest"
 }
 
-void doXiInvMassFits(bool makePDF = false){
-  TDirectory* XiInvMass = outputFile->mkdir("XiInvMass");
+void doXiInvMassFits(TString charge, bool makePDF = false){
+  assert(charge == "Minus" || charge == "Plus" && "Error in Xi inv. mass fits: charge has to be either 'Minus' or 'Plus'");
+  TString sign;
+  charge == "Minus" ? sign = "-" : sign = "+";
+
+  TDirectory* XiInvMass = outputFile->mkdir("Xi"+charge+"InvMass");
   XiInvMass->cd();
 
   TF1 *f1 = new TF1("f1", "pol2(0) + gaus(3) + gaus(6)", 1.29, 1.42); 
@@ -180,15 +188,18 @@ void doXiInvMassFits(bool makePDF = false){
   f1->SetParLimits(8, 0, 0.01);
 
   TF1 *fBKGXi = new TF1("fBKGXi", pol2bkgXi, 1.29, 1.42, 3);
-  TH2F *hMassXiMinus = inputDir->Get<TH2F>("hMassXiMinus");
-  hMassXiMinus->SetDirectory(outputFile);
+  TH3F *hXiMass = inputDir->Get<TH3F>("hMassXi" + charge);
+  hXiMass->SetDirectory(outputFile);
   cout << "Start Xi mass fitting..." << endl;
   TCanvas *c = new TCanvas();
   for (int pTbin = 0; pTbin < maxPtBins - 1; pTbin++){
-    hMassXiMinus->GetYaxis()->SetRangeUser(pTbins[pTbin], pTbins[pTbin + 1]);
-    TH1D *h = hMassXiMinus->ProjectionX("hMassXiMinus_"+ pTlabels[pTbin + 1]);
-    h->GetXaxis()->SetRangeUser(1.2, 1.5);
-    h->SetTitle("#Xi^{-} inv. mass for " + pTlabels[pTbin] + " GeV < p_{T} < " + pTlabels[pTbin+1] + " GeV");
+    hXiMass->GetYaxis()->SetRangeUser(pTbins[pTbin], pTbins[pTbin + 1]);
+    // TH1D *h = hXiMass->ProjectionX("hMassXi" + charge + "_" + pTlabels[pTbin + 1]);
+    TH1D *h = (TH1D*) hXiMass->Project3D("x");
+    h->SetName("hMassXi" + charge + "_" + pTlabels[pTbin + 1]);
+    // h->GetXaxis()->SetRangeUser(1.2, 1.5);
+    // h->SetTitle("#Xi^{"+sign+"} inv. mass for " + pTlabels[pTbin] + " GeV < p_{T} < " + pTlabels[pTbin+1] + " GeV");
+    h->SetTitle(";#Lambda#pi inv. mass (GeV/#it{c^{2}}); counts");
     f1->SetParameter(3, .4* h->GetMaximum());
     f1->SetParameter(6, .4* h->GetMaximum());
     h->Fit(fBKGXi, "SLBQRO");
@@ -206,18 +217,22 @@ void doXiInvMassFits(bool makePDF = false){
     h->SetStats(kFALSE);
     // h->SetLineWidth(3);
     h->Draw();
-    if(makePDF) c->Print("figures/Ximass" + pTlabels[pTbin] + "_" + pTlabels[pTbin+1] + ".pdf");
+    if(makePDF) c->Print("figures/Xi" + charge + pTlabels[pTbin] + "_" + pTlabels[pTbin+1] + ".pdf");
     c->Clear();
 
     sigXi[pTbin][0] = mu - 3*sigma; sigXi[pTbin][1] = mu + 3*sigma;
     bkgXi[pTbin][0] = mu + 4*sigma; bkgXi[pTbin][1] = mu + 10*sigma;
-    // cout << sigXi[pTbin][0] << " " << sigXi[pTbin][1] << " " << bkgXi[pTbin][0] << " " << bkgXi[pTbin][1] << endl;
+    cout << sigXi[pTbin][0] << " " << sigXi[pTbin][1] << " " << bkgXi[pTbin][0] << " " << bkgXi[pTbin][1] << endl;
   }
   outputFile->cd();
 }
 
-void doOmInvMassFits(){
-  TDirectory* OmInvMass = outputFile->mkdir("OmInvMass");
+void doOmInvMassFits(TString charge, bool makePDF = false){
+  assert(charge == "Minus" || charge == "Plus" && "Error in Xi inv. mass fits: charge has to be either 'Minus' or 'Plus'");
+  TString sign;
+  charge == "Minus" ? sign = "-" : sign = "+";
+
+  TDirectory* OmInvMass = outputFile->mkdir("Om"+charge+"InvMass");
   OmInvMass->cd();
 
   TF1 *f2 = new TF1("f2", "pol2(0) + gaus(3) + gaus(6)", 1.64, 1.74); 
@@ -231,14 +246,18 @@ void doOmInvMassFits(){
 
   TF1 *fBKG = new TF1("fBKG", pol2bkg, 1.64, 1.74, 3);
 
-  TH2F *hMassOmegaMinus = inputDir->Get<TH2F>("hMassOmegaMinus");
-  hMassOmegaMinus->SetDirectory(outputFile);
+  TH3F *hOmegaMass = inputDir->Get<TH3F>("hMassOmega"+charge);
+  hOmegaMass->SetDirectory(outputFile);
   cout << "Start Omega mass fitting..." << endl;
+  TCanvas *c = new TCanvas();
   for (int pTbin = 0; pTbin < maxPtBins - 1; pTbin++){
-    hMassOmegaMinus->GetYaxis()->SetRangeUser(pTbins[pTbin], pTbins[pTbin+1]);
-    TH1D *h = hMassOmegaMinus->ProjectionX("hMassOmegaMinus_"+ pTlabels[pTbin + 1]);
-    h->GetXaxis()->SetRangeUser(1.6, 1.9);
-    h->SetTitle("#Omega^{-} inv. mass for " + pTlabels[pTbin] + " GeV < p_{T} < " + pTlabels[pTbin+1] + " GeV");
+    hOmegaMass->GetYaxis()->SetRangeUser(pTbins[pTbin], pTbins[pTbin+1]);
+    // TH1D *h = hOmegaMass->ProjectionX("hMassOmega"+charge+"_"+ pTlabels[pTbin + 1]);
+    TH1D *h = (TH1D*) hOmegaMass->Project3D("x");
+    h->SetName("hMassOmega" + charge + "_" + pTlabels[pTbin + 1]);
+    // h->GetXaxis()->SetRangeUser(1.6, 1.9);
+    // h->SetTitle("#Omega^{"+sign+"} inv. mass for " + pTlabels[pTbin] + " GeV < p_{T} < " + pTlabels[pTbin+1] + " GeV");
+    h->SetTitle(";#Lambda K inv. mass (GeV/#it{c^{2}}); counts");
     f2->SetParameter(3, 0.3* h->GetMaximum());
     f2->SetParameter(6, 0.4* h->GetMaximum());
     h->Fit(fBKG, "SLBQRO");
@@ -254,7 +273,10 @@ void doOmInvMassFits(){
 
     h->GetXaxis()->SetRangeUser(1.63, 1.72);
     h->SetStats(kFALSE);
-    h->SetLineWidth(3);
+    // h->SetLineWidth(3);
+    h->Draw();
+    if(makePDF) c->Print("figures/Omega" + charge + pTlabels[pTbin] + "_" + pTlabels[pTbin+1] + ".pdf");
+    c->Clear();
 
     if(mu + 10*sigma > 1.76) cout << "Warning: Bkg region exceeds limit of 1.76 GeV in pT bin " << pTbin << endl;
     sigOm[pTbin][0] = mu - 3*sigma; sigOm[pTbin][1] = mu + 3*sigma;
@@ -265,87 +287,53 @@ void doOmInvMassFits(){
 }
 
 std::vector<TH1D*> doMixedEvents(TString trainnr, TString filename = "AnalysisResults.root"){
-  axranges aMEXiXiOS{{corr::ptTrigg, {1.0, 10.}}, {corr::ptAssoc, {1.0, 10.}}, 
+  axranges aMEXiXi{{corr::ptTrigg, {1.0, 10.}}, {corr::ptAssoc, {1.0, 10.}}, 
                      {corr::dY, {-1., 1.}},
-                     {corr::invMassTrigg, {1.31, 1.33}}, {corr::invMassAssoc, {1.31, 1.33}} // fixme read invmass from fits (dedicated function?)
+                     {corr::invMassTrigg, {sigXi[0][0], sigXi[0][1]}}, {corr::invMassAssoc, {sigXi[0][0], sigXi[0][1]}} // fixme read invmass from fits (dedicated function?)
   };
   // do ME here
-  THnSparse *hXiXiOS, *hXiXiSS;
-  inputDir->GetObject("MixedEvents/hMEXiXiOS", hXiXiOS);
-  inputDir->GetObject("MixedEvents/hMEXiXiSS", hXiXiSS);
-  THnSparse *hOmXiOS, *hOmXiSS;
-  inputDir->GetObject("MixedEvents/hMEOmXiOS", hOmXiOS);
-  inputDir->GetObject("MixedEvents/hMEOmXiSS", hOmXiSS);
-  THnSparse *hOmOmOS, *hOmOmSS;
-  inputDir->GetObject("MixedEvents/hMEOmOmOS", hOmOmOS);
-  inputDir->GetObject("MixedEvents/hMEOmOmSS", hOmOmSS);
+  THnSparse *hXiXi, *hXiOm, *hOmOm;
+  inputDir->GetObject("MixedEvents/hMEXiXi", hXiXi);
+  inputDir->GetObject("MixedEvents/hMEXiOm", hXiOm);
+  inputDir->GetObject("MixedEvents/hMEOmOm", hOmOm);
 
   // Okay let's take Xi-Xi OS combination to make ME projection in rapidity and phi (all pT ranges)
-  TH1D *hXiXiOSdY = project(hXiXiOS, corr::dY, aMEXiXiOS);
-  hXiXiOSdY->SetName("hMEXiOSdY");
-  hXiXiOSdY->SetTitle("ME #Xi-#Xi OS (pT integrated)");
-  hXiXiOSdY->SetYTitle("pairs OS");
-  hXiXiOSdY->SetLineWidth(3);
-  hXiXiOSdY->Scale(1. / hXiXiOSdY->GetMaximum());
+  TH1D *hXiXidY = project(hXiXi, corr::dY, aMEXiXi);
+  hXiXidY->SetName("hMEXiOSdY");
+  hXiXidY->SetTitle("ME #Xi-#Xi (pT integrated)");
+  hXiXidY->SetYTitle("pairs OS");
+  hXiXidY->SetLineWidth(3);
+  hXiXidY->Scale(1. / hXiXidY->GetMaximum());
 
-  TH1D *hXiXiSSdY = project(hXiXiSS, corr::dY, aMEXiXiOS);
-  hXiXiSSdY->SetName("hMEXiSSdY");
-  hXiXiSSdY->SetTitle("ME #Xi-#Xi SS (pT integrated)");
-  hXiXiSSdY->SetYTitle("pairs SS");
-  hXiXiSSdY->SetLineWidth(3);
-  hXiXiSSdY->Scale(1. / hXiXiSSdY->GetMaximum());
+  TH1D *hXiXidPhi = project(hXiXi, corr::dPhi, aMEXiXi);
+  hXiXidPhi->SetName("hMEXiOSdPhi");
+  hXiXidPhi->SetTitle("ME #Xi-#Xi (pT integrated)");
+  hXiXidPhi->SetYTitle("pairs OS");
+  hXiXidPhi->SetLineWidth(3);
+  hXiXidPhi->Rebin(9);
+  hXiXidPhi->Scale(1. / hXiXidPhi->GetMaximum());
 
-  TH1D *hXiXiOSdPhi = project(hXiXiOS, corr::dPhi, aMEXiXiOS);
-  hXiXiOSdPhi->SetName("hMEXiOSdPhi");
-  hXiXiOSdPhi->SetTitle("ME #Xi-#Xi OS (pT integrated)");
-  hXiXiOSdPhi->SetYTitle("pairs OS");
-  hXiXiOSdPhi->SetLineWidth(3);
-  hXiXiOSdPhi->Rebin(9);
-  hXiXiOSdPhi->Scale(1. / hXiXiOSdPhi->GetMaximum());
-
-  TH1D *hXiXiSSdPhi = project(hXiXiSS, corr::dPhi, aMEXiXiOS);
-  hXiXiSSdPhi->SetName("hMEXiSSdPhi");
-  hXiXiSSdPhi->SetTitle("ME #Xi-#Xi SS (pT integrated)");
-  hXiXiSSdPhi->SetYTitle("pairs SS");
-  hXiXiSSdPhi->SetLineWidth(3);
-  hXiXiSSdPhi->Rebin(9);
-  hXiXiSSdPhi->Scale(1. / hXiXiSSdPhi->GetMaximum());
-
-  axranges aMEOmXiOS{{corr::ptTrigg, {1., 5.0}}, {corr::ptAssoc, {1., 5.0}},
+  axranges aMEXiOm{{corr::ptTrigg, {1., 5.0}}, {corr::ptAssoc, {1., 5.0}},
                     //  {corr::dY, {-1., 1.}},
                       {corr::invMassTrigg, {1.66, 1.685}}, {corr::invMassAssoc, {1.31, 1.33}}
   };
   // Okay let's take Om-Xi OS combination to make ME projection in rapidity and phi (all pT ranges)
-  TH1D *hOmXiOSdY = project(hOmXiOS, corr::dY, aMEOmXiOS);
-  hOmXiOSdY->SetName("hMEOmXiOSdY");
-  hOmXiOSdY->SetTitle("ME #Omega-#Xi OS (pT integrated)");
-  hOmXiOSdY->SetYTitle("pairs OS");
-  hOmXiOSdY->SetLineWidth(3);
-  hOmXiOSdY->Scale(1. / hOmXiOSdY->GetMaximum());
+  TH1D *hXiOmdY = project(hXiOm, corr::dY, aMEXiOm);
+  hXiOmdY->SetName("hMEXiOmdY");
+  hXiOmdY->SetTitle("ME #Xi-#Omega (pT integrated)");
+  hXiOmdY->SetYTitle("pairs OS");
+  hXiOmdY->SetLineWidth(3);
+  hXiOmdY->Scale(1. / hXiOmdY->GetMaximum());
 
-  TH1D *hOmXiSSdY = project(hOmXiSS, corr::dY, aMEOmXiOS);
-  hOmXiSSdY->SetName("hMEOmXiSSdY");
-  hOmXiSSdY->SetTitle("ME #Omega-#Xi SS (pT integrated)");
-  hOmXiSSdY->SetYTitle("pairs SS");
-  hOmXiSSdY->SetLineWidth(3);
-  hOmXiSSdY->Scale(1. / hOmXiSSdY->GetMaximum());
+  TH1D *hXiOmdPhi = project(hXiOm, corr::dPhi, aMEXiOm);
+  hXiOmdPhi->SetName("hMEXiOmdPhi");
+  hXiOmdPhi->SetTitle("ME #Xi-#Omega (pT integrated)");
+  hXiOmdPhi->SetYTitle("pairs OS");
+  hXiOmdPhi->SetLineWidth(3);
+  hXiOmdPhi->Rebin(9);
+  hXiOmdPhi->Scale(1. / hXiOmdPhi->GetMaximum());
 
-  TH1D *hOmXiOSdPhi = project(hOmXiOS, corr::dPhi, aMEOmXiOS);
-  hOmXiOSdPhi->SetName("hMEOmXiOSdPhi");
-  hOmXiOSdPhi->SetTitle("ME #Omega-#Xi OS (pT integrated)");
-  hOmXiOSdPhi->SetYTitle("pairs OS");
-  hOmXiOSdPhi->SetLineWidth(3);
-  hOmXiOSdPhi->Rebin(9);
-  hOmXiOSdPhi->Scale(1. / hOmXiOSdPhi->GetMaximum());
-
-  TH1D *hOmXiSSdPhi = project(hOmXiSS, corr::dPhi, aMEOmXiOS);
-  hOmXiSSdPhi->SetName("hMEOmXiSSdPhi");
-  hOmXiSSdPhi->SetTitle("ME #Omega-#Xi SS (pT integrated)");
-  hOmXiSSdPhi->SetYTitle("pairs SS");
-  hOmXiSSdPhi->SetLineWidth(3);
-  hOmXiSSdPhi->Rebin(9);
-  hOmXiSSdPhi->Scale(1. / hOmXiSSdPhi->GetMaximum());
-  return {hXiXiOSdPhi, hXiXiSSdPhi, hXiXiOSdY, hXiXiSSdY, hOmXiOSdPhi, hOmXiSSdPhi, hOmXiOSdY, hOmXiSSdY};
+  return {hXiXidPhi, hXiXidY, hXiOmdPhi, hXiOmdY};
 }
 
 int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.root", bool makePDF = false) {
@@ -366,25 +354,30 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
   
   // make sure inputFiles and stuff are not null
   assert((!inputFile && !inputDir && !outputFile) && "input or output file is null pointer!");
+  TCanvas *c = new TCanvas("c");
+  c->cd();
+  gPad->SetTheta(60); // test POV for 2D correlations
 
   // QA plots
   cout << "-- QA PROJECTIONS --" << endl;
   TH1F *hPhi = inputDir->Get<TH1F>("hPhi");
   hPhi->SetDirectory(outputFile);
-  hPhi->Draw();
+  // hPhi->Draw();
 
   doQAprojections(inputFile);
+
+  // test inv mass fitting
+  cout << "-- INV MASS FITS --" << endl;
+  doXiInvMassFits("Minus", makePDF);
+  doXiInvMassFits("Plus", makePDF);
+  doOmInvMassFits("Minus", makePDF);
+  doOmInvMassFits("Plus", makePDF);
+  // todo: assert some properties of the inv mass region boundaries to ensure everything went ok.
 
   // test ME
   cout << "-- MIXED EVENTS --" << endl;
   std::vector<TH1D*> hME_vector;
   hME_vector = doMixedEvents(trainnr);
-
-  // test inv mass fitting
-  cout << "-- INV MASS FITS --" << endl;
-  doXiInvMassFits();
-  doOmInvMassFits();
-  // todo: assert some properties of the inv mass region boundaries to ensure everything went ok.
 
   // now that we have the inv mass regions, let's project and integrate the eff corrected inv mass plots to determine the number of triggers
   cout << "-- NORMALIZATION --" << endl;
@@ -431,41 +424,38 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
   //   cout << "test Om " << i << endl;
   // }
   
-  // Load the THnSparses, 8 in total (4 particle combinations * 2 sign combinations)
-  THnSparse *hXiXiOS, *hXiXiSS;
-  inputDir->GetObject("hXiXiOS", hXiXiOS);
-  inputDir->GetObject("hXiXiSS", hXiXiSS);
-  THnSparse *hOmXiOS, *hOmXiSS;
-  inputDir->GetObject("hOmXiOS", hOmXiOS);
-  inputDir->GetObject("hOmXiSS", hOmXiSS);
-  THnSparse *hOmOmOS, *hOmOmSS;
-  inputDir->GetObject("hOmOmOS", hOmOmOS);
-  inputDir->GetObject("hOmOmSS", hOmOmSS);
+  // Load the THnSparses
+  THnSparse *hXiXi, *hXiOm, *hOmOm;
+  inputDir->GetObject("hXiXi", hXiXi);
+  inputDir->GetObject("hXiOm", hXiOm);
+  inputDir->GetObject("hOmOm", hOmOm);
 
   // test projection of Xi-Xi OS onto 2D dphi-dy
-  axranges aPtIntegrated{{corr::ptTrigg, {1., 10}}, {corr::ptAssoc, {1., 10}},
-                         {corr::dY, {-1., 1.}},
-                         {corr::invMassTrigg, {1.31, 1.33}}, {corr::invMassAssoc, {1.31, 1.33}}
-  };
-  axranges aPtIntMass{{mass::pT, {1., pTmax}}, 
+  axranges aPtIntMass{{mass::pT, {1., 10.}}, 
                       // {mass::y, {-0.5, 0.5}},
-                      {mass::invMass, {1.31, 1.33}}
+                      {mass::invMass, {sigXi[0][0], sigXi[0][1]}}
   };
   // make single Xi spectra (charge independent)
   // get Nevents:
-  double Nevents = inputFile->Get<TH1D>("event-selection-task/hColCounterAcc")->Integral();
-  cout << Nevents << endl;
+  // double Nevents = inputFile->Get<TH1D>("eventselection-run3/eventselection/hColCounterAcc")->Integral();
+  double Nevents = (double) inputFile->Get<TH1I>("cascade-selector/hEventSel")->GetBinContent(6);
+  cout << "Nevents: " << Nevents << endl;
   TH1D* hXiSpectra = project(hEffCorrXiMass, mass::pT, {{mass::pT, {0., pTmax}}, {mass::y, {-0.5, 0.5}}, {mass::invMass, {1.31, 1.33}}});
   hXiSpectra->SetName("hXiSpectra");
   Double_t Xibinning[14] = {0.6, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.5, 2.9, 3.4, 4.0, 5.0, 6.5};
   TH1D* hSpectraRebin = (TH1D*) hXiSpectra->Rebin(13, "hSpectraRebin", Xibinning);
   hSpectraRebin->Scale(1./(Nevents), "width"); // divide by an extra factor of 2 because of Xi charges ---- 65536 = factor of 2^n used in run 3 AN
-  TH2F *hMassXiMinus = inputDir->Get<TH2F>("hMassXiMinus");
+  hSpectraRebin->Scale(1256434609./2616624805.); // Nev(rec) = 1256434609 / Nev(gen) = 2616624805 (run 511883)
+  // hSpectraRebin->Scale(0.653); // Nev(rec) = 1256434609 / Nev(gen) = 2616624805 (run 511883)
+  TH3F *hMassXiMinus = inputDir->Get<TH3F>("hMassXiMinus");
   TH1D *hXiMinusMass1D = hMassXiMinus->ProjectionX();
   hXiMinusMass1D->SetName("hXiMinusMass1D");
   TH1D *hRawXiMass = hMassXiMinus->ProjectionY("hRawXiMass");
   TH1D* hRawSpectraRebin = (TH1D*) hRawXiMass->Rebin(13, "hRawSpectraRebin", Xibinning);
   hRawSpectraRebin->Scale(1./Nevents, "width"); // ---- 65536 = factor of 2^n used in run 3 AN
+
+  TH1D* hXiSpectraMult = project(hEffCorrXiMass, mass::multiplicity, {{mass::pT, {0.6, pTmax}}, {mass::y, {-0.5, 0.5}}, {mass::invMass, {1.31, 1.33}}, {mass::multiplicity, {0,99}}});
+  hXiSpectraMult->SetName("hXiSpectraMult");
 
   TFile *run2file = new TFile("run2Xispectra.root", "READ");
   outputFile->cd();
@@ -502,84 +492,189 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
   if(makePDF) cRatio->Print("figures/spectraRatio.pdf");
   cRatio->Write();
 
-  TH1D *hXiMassPtInt = project(hEffCorrXiMass, mass::invMass, aPtIntMass);
-  hXiMassPtInt->SetName("hEffXiMass_pTint");
-  double nXiTriggers = hXiMassPtInt->Integral();
+  // CORRELATIONS
 
   // TEMP remove this
   // make quick pT spectrum of eff corrected xi, to make ratio
   TH1D *hXiEffpT = project(hEffCorrXiMass, mass::pT, aPtIntMass);
   hXiEffpT->SetName("TEMPXiEffpT");
 
-  TH2D *h2DtestOS = project2D(hXiXiOS, corr::dPhi, corr::dY, aPtIntegrated);
-  h2DtestOS->SetName("h2DtestOS");
-  h2DtestOS->Scale(1. / nXiTriggers);
-  // h2DtestOS->Rebin2D(1,5);
-  TH2D *h2DtestSS = project2D(hXiXiSS, corr::dPhi, corr::dY, aPtIntegrated);
-  h2DtestSS->SetName("h2DtestSS");
-  h2DtestSS->Scale(1. / nXiTriggers);
-  // h2DtestSS->Rebin2D(1,5);
-  TH2D *h2Dtest = new TH2D(*h2DtestOS);
-  h2Dtest->Add(h2DtestOS, h2DtestSS, 1, -1);
-  h2Dtest->SetName("h2Dtest");
-  h2Dtest->ProjectionX("hDYtest");
-  h2Dtest->ProjectionY("hDPhitest");
+  axranges aPtIntegrated{{corr::signTrigg, {-1, -1}}, {corr::signAssoc, {1, 1}},
+                        {corr::ptTrigg, {1., 10}}, {corr::ptAssoc, {1., 10}},
+                        {corr::dY, {-1., 1.}},
+                        {corr::invMassTrigg, {sigXi[0][0], sigXi[0][1]}}, {corr::invMassAssoc, {sigXi[0][0], sigXi[0][1]}}
+  };
 
-  // inv mass of Xi trig & assoc (OS)
-  TH1D *hXiInvMassTrig = project(hXiXiOS, corr::invMassTrigg, aPtIntegrated);
+  axranges aXiMinXiPlus{{corr::signTrigg, {-1, -1}}, {corr::signAssoc, {1, 1}},
+                        {corr::ptTrigg, {1., 10}}, {corr::ptAssoc, {1., 10}},
+                        {corr::dY, {-1., 1.}},
+                        {corr::invMassTrigg, {sigXi[0][0], sigXi[0][1]}}, {corr::invMassAssoc, {sigXi[0][0], sigXi[0][1]}}
+  };
+  axranges aXiMinXiMin{{corr::signTrigg, {-1, -1}}, {corr::signAssoc, {-1, -1}},
+                      {corr::ptTrigg, {1., 10}}, {corr::ptAssoc, {1., 10}},
+                      {corr::dY, {-1., 1.}},
+                      {corr::invMassTrigg, {sigXi[0][0], sigXi[0][1]}}, {corr::invMassAssoc, {sigXi[0][0], sigXi[0][1]}}
+  };
+  axranges aXiPlusXiMin{{corr::signTrigg, {1, 1}}, {corr::signAssoc, {-1, -1}},
+                        {corr::ptTrigg, {1., 10}}, {corr::ptAssoc, {1., 10}},
+                        {corr::dY, {-1., 1.}},
+                        {corr::invMassTrigg, {sigXi[0][0], sigXi[0][1]}}, {corr::invMassAssoc, {sigXi[0][0], sigXi[0][1]}}
+  };
+  axranges aXiPlusXiPlus{{corr::signTrigg, {1, 1}}, {corr::signAssoc, {1, 1}},
+                        {corr::ptTrigg, {1., 10}}, {corr::ptAssoc, {1., 10}},
+                        {corr::dY, {-1., 1.}},
+                        {corr::invMassTrigg, {sigXi[0][0], sigXi[0][1]}}, {corr::invMassAssoc, {sigXi[0][0], sigXi[0][1]}}
+  };
+
+  // inv mass of Xi trig & assoc
+  TH1D *hXiInvMassTrig = project(hXiXi, corr::invMassTrigg, aPtIntegrated);
   hXiInvMassTrig->SetName("hXiInvMassTrig");
-  TH1D *hXiInvMassAssoc = project(hXiXiOS, corr::invMassAssoc, aPtIntegrated);
+  TH1D *hXiInvMassAssoc = project(hXiXi, corr::invMassAssoc, aPtIntegrated);
   hXiInvMassAssoc->SetName("hXiInvMassAssoc");
 
-  // quick pT integrated ME correction applied
-  TH1D* hDYOScorrected = project(hXiXiOS, corr::dY, aPtIntegrated);
-  hDYOScorrected->SetName("hDYOScorrected");
-  hDYOScorrected->Scale(1. / nXiTriggers);
-  hDYOScorrected->Divide(hME_vector[2]);
-  TH1D* hDYSScorrected = project(hXiXiSS, corr::dY, aPtIntegrated);
-  hDYSScorrected->SetName("hDYSScorrected");
-  hDYSScorrected->Scale(1. / nXiTriggers);
-  hDYSScorrected->Divide(hME_vector[3]);
-  TH1D *hDYcorrected = new TH1D(*hDYOScorrected);
-  hDYcorrected->Add(hDYOScorrected, hDYSScorrected, 1, -1);
-  hDYcorrected->SetName("hDYcorrected");
+  // TRIGGER NORMALIZATION
+  axranges aMassXiMin{{mass::pT, {1., 10.}}, 
+                      {mass::sign, {-1, -1}},
+                      {mass::invMass, {sigXi[0][0], sigXi[0][1]}}
+  };
+  axranges aMassXiPlus{{mass::pT, {1., 10.}}, 
+                      {mass::sign, {1, 1}},
+                      {mass::invMass, {sigXi[0][0], sigXi[0][1]}}
+  };
   
-  TH1D* hDPhiOScorrected = project(hXiXiOS, corr::dPhi, aPtIntegrated);
-  hDPhiOScorrected->SetName("hDPhiOScorrected");
-  hDPhiOScorrected->Scale(1. / nXiTriggers);
-  hDPhiOScorrected->Scale(20. / (2 * M_PI)); // scale by bin width for correct dN/d(dphi)
-  hDPhiOScorrected->Rebin(9);
-  hDPhiOScorrected->Divide(hME_vector[0]);
-  hDPhiOScorrected->SetTitle("OS #Xi - #Xi (1 GeV/#it{c} < #it{p}_{T,trigger} < 10 GeV/#it{c});#Delta#varphi;1/#it{N}_{triggers} d#it{N}/d(#Delta#varphi) (rad^{-1})");
-  hDPhiOScorrected->SetStats(false);
-  TH1D* hDPhiSScorrected = project(hXiXiSS, corr::dPhi, aPtIntegrated);
-  hDPhiSScorrected->SetName("hDPhiSScorrected");
-  hDPhiSScorrected->Scale(1. / nXiTriggers);
-  hDPhiSScorrected->Scale(20. / (2 * M_PI)); // scale by bin width for correct dN/d(dphi)
-  hDPhiSScorrected->Rebin(9);
-  hDPhiSScorrected->Divide(hME_vector[1]);
-  hDPhiSScorrected->SetTitle("SS #Xi - #Xi (1 GeV/#it{c} < #it{p}_{T,trigger} < 10 GeV/#it{c});#Delta#varphi;1/#it{N}_{triggers} d#it{N}/d(#Delta#varphi) (rad^{-1})");
-  hDPhiSScorrected->SetStats(false);
-  TH1D *hDPhicorrected = new TH1D(*hDPhiOScorrected);
-  hDPhicorrected->Add(hDPhiOScorrected, hDPhiSScorrected, 1, -1);
-  hDPhicorrected->SetName("hDPhicorrected");
-  hDPhicorrected->SetTitle("OS - SS #Xi - #Xi (1 GeV/#it{c} < #it{p}_{T,trigger} < 10 GeV/#it{c});#Delta#varphi;1/#it{N}_{triggers} d#it{N}/d(#Delta#varphi) (rad^{-1})");
-  hDPhicorrected->SetStats(false);
+  TH1D *hMassTest = hEffCorrXiMass->Projection(0);
+  hMassTest->SetName("hMassTest");
+  TH1D *hXiMinMassPtInt = project(hEffCorrXiMass, mass::invMass, aMassXiMin);
+  hXiMinMassPtInt->SetName("hEffXiMinMass_pTint");
+  double nXiMin = hXiMinMassPtInt->Integral();
+  TH1D *hXiPlusMassPtInt = project(hEffCorrXiMass, mass::invMass, aMassXiPlus);
+  hXiPlusMassPtInt->SetName("hEffXiPlusMass_pTint");
+  double nXiPlus = hXiPlusMassPtInt->Integral();
+  cout << "NXiMin: " << nXiMin << ", NXiPlus: " << nXiPlus << endl;
+
+  // test ME with perfect triangle (dY) and uniform (dPhi) correction:
+  TH2D *hTestME = new TH2D("hTestME", "hTestME", 20, -0.5*M_PI, 1.5*M_PI, 20, -1, 1);
+  for (int dphibin = 0; dphibin < 20; dphibin++){
+    double x = (dphibin+0.5)*2*M_PI/20. - 0.5*M_PI;
+    for (int dybin = 0; dybin < 20; dybin++){
+      double y = (dybin+0.5)*0.1 - 1;
+      hTestME->Fill(x, y, 1-std::abs(y));
+      hTestME->SetBinError(hTestME->FindBin(x,y), 0);
+    }
+  }
+  
+  c->cd(); //not sure why, but need this here
+  // actual 2D ME, just take Xi-Xi all sign combinations
+  THnSparse *hMEXiXi;
+  inputDir->GetObject("MixedEvents/hMEXiXi", hMEXiXi);
+  axranges aMEXiXi{{corr::ptTrigg, {1.0, 10.}}, {corr::ptAssoc, {1.0, 10.}}, 
+                  {corr::dY, {-1., 1.}},
+                  {corr::invMassTrigg, {sigXi[0][0], sigXi[0][1]}}, {corr::invMassAssoc, {sigXi[0][0], sigXi[0][1]}} // fixme read invmass from fits (dedicated function?)
+  };
+  TH2D *hMEXiXi2D = project2D(hMEXiXi, corr::dY, corr::dPhi, aMEXiXi);
+  hMEXiXi2D->SetName("hMEXiXi2D");
+  hMEXiXi2D->SetTitle("");
+  hMEXiXi2D->RebinX(9);
+  // normalize by taking the integral -0.1 < dy < 0.1 and -pi/2 < dphi < pi/2
+  // hardcoded! integrate over 20 bins, so divide (multiply) by 20 to take average
+  hMEXiXi2D->Scale(20. / hMEXiXi2D->Integral(1,10,10,11));
+  hMEXiXi2D->SetStats(false);
+  hMEXiXi2D->Draw("surf1");
+  // c->Write("cMEXiXi2D");
+  if(makePDF) c->Print("figures/ME/XiXi.pdf");
+  c->Clear();
+
+  TH1D *hMEXiXidPhi = hMEXiXi2D->ProjectionX();
+  hMEXiXidPhi->SetName("hMEXiXidPhi");
+  hMEXiXidPhi->SetTitle("");
+  hMEXiXidPhi->SetStats(false);
+  hMEXiXidPhi->Scale(1./hMEXiXi2D->GetNbinsX());
+  hMEXiXidPhi->Draw();
+  if(makePDF) c->Print("figures/ME/XiXidPhi.pdf");
+  c->Clear();
+  TH1D *hMEXiXidY = hMEXiXi2D->ProjectionY();
+  hMEXiXidY->SetName("hMEXiXidY");
+  hMEXiXidY->SetTitle("");
+  hMEXiXidY->SetStats(false);
+  hMEXiXidY->Scale(1./hMEXiXi2D->GetNbinsY());
+  hMEXiXidY->Draw();
+  if(makePDF) c->Print("figures/ME/XiXidY.pdf");
+  c->Clear();
+
+  //2D
+
+  TH2D* hXiMinXiPlus = project2D(hXiXi, corr::dY, corr::dPhi, aXiMinXiPlus);
+  hXiMinXiPlus->SetName("hXiMinXiPlus");
+  hXiMinXiPlus->RebinX(9);
+  hXiMinXiPlus->Scale(1. / nXiMin);
+  hXiMinXiPlus->Divide(hMEXiXi2D);
+  hXiMinXiPlus->SetTitle("#Xi^{-} - #Xi^{+} (1 GeV/#it{c} < #it{p}_{T,trigger} < 10 GeV/#it{c});#Delta#varphi;1/#it{N}_{triggers} d#it{N}/d(#Delta#varphi) (rad^{-1})");
+  hXiMinXiPlus->SetStats(false);
+  TH1D* hXiMinXiPlus1D = hXiMinXiPlus->ProjectionX("hXiMinXiPlus1D");
+  hXiMinXiPlus1D->Scale(20. / (2 * M_PI)); // scale by bin width for correct dN/d(dphi)
+  TH2D* hXiMinXiMin = project2D(hXiXi, corr::dY, corr::dPhi, aXiMinXiMin);
+  hXiMinXiMin->SetName("hXiMinXiMin");
+  hXiMinXiMin->RebinX(9);
+  hXiMinXiMin->Scale(1. / nXiMin);
+  hXiMinXiMin->Divide(hMEXiXi2D);
+  hXiMinXiMin->SetTitle("#Xi^{-} - #Xi^{-} (1 GeV/#it{c} < #it{p}_{T,trigger} < 10 GeV/#it{c});#Delta#varphi;1/#it{N}_{triggers} d#it{N}/d(#Delta#varphi) (rad^{-1})");
+  hXiMinXiMin->SetStats(false);
+  TH1D* hXiMinXiMin1D = hXiMinXiMin->ProjectionX("hXiMinXiMin1D");
+  hXiMinXiMin1D->Scale(20. / (2 * M_PI)); // scale by bin width for correct dN/d(dphi)
+  TH2D* hXiPlusXiMin = project2D(hXiXi, corr::dY, corr::dPhi, aXiPlusXiMin);
+  hXiPlusXiMin->SetName("hXiPlusXiMin");
+  hXiPlusXiMin->RebinX(9);
+  hXiPlusXiMin->Scale(1. / nXiPlus);
+  hXiPlusXiMin->Divide(hMEXiXi2D);
+  hXiPlusXiMin->SetTitle("#Xi^{+} - #Xi^{-} (1 GeV/#it{c} < #it{p}_{T,trigger} < 10 GeV/#it{c});#Delta#varphi;1/#it{N}_{triggers} d#it{N}/d(#Delta#varphi) (rad^{-1})");
+  hXiPlusXiMin->SetStats(false);
+  TH1D* hXiPlusXiMin1D = hXiPlusXiMin->ProjectionX("hXiPlusXiMin1D");
+  hXiPlusXiMin1D->Scale(20. / (2 * M_PI)); // scale by bin width for correct dN/d(dphi)
+  TH2D* hXiPlusXiPlus = project2D(hXiXi, corr::dY, corr::dPhi, aXiPlusXiPlus);
+  hXiPlusXiPlus->SetName("hXiPlusXiPlus");
+  hXiPlusXiPlus->RebinX(9);
+  hXiPlusXiPlus->Scale(1. / nXiPlus);
+  hXiPlusXiPlus->Divide(hMEXiXi2D);
+  hXiPlusXiPlus->SetTitle("#Xi^{+} - #Xi^{+} (1 GeV/#it{c} < #it{p}_{T,trigger} < 10 GeV/#it{c});#Delta#varphi;1/#it{N}_{triggers} d#it{N}/d(#Delta#varphi) (rad^{-1})");
+  hXiPlusXiPlus->SetStats(false);
+  TH1D* hXiPlusXiPlus1D = hXiPlusXiPlus->ProjectionX("hXiPlusXiPlus1D");
+  hXiPlusXiPlus1D->Scale(20. / (2 * M_PI)); // scale by bin width for correct dN/d(dphi)
+
+  TH2D *hXiXiOS2D = new TH2D(*hXiMinXiPlus);
+  hXiXiOS2D->Add(hXiMinXiPlus, hXiPlusXiMin, 0.5, 0.5);
+  hXiXiOS2D->SetName("hXiXiOS2D");
+  hXiXiOS2D->SetTitle("OS #Xi - #Xi (1 GeV/#it{c} < #it{p}_{T,trigger} < 10 GeV/#it{c})");
+  TH2D *hXiXiSS2D = new TH2D(*hXiMinXiMin);
+  hXiXiSS2D->Add(hXiMinXiMin, hXiPlusXiPlus, 0.5, 0.5);
+  hXiXiSS2D->SetName("hXiXiSS2D");
+  hXiXiSS2D->SetTitle("SS #Xi - #Xi (1 GeV/#it{c} < #it{p}_{T,trigger} < 10 GeV/#it{c})");
+  TH2D *hXiXi2D = new TH2D(*hXiXiOS2D);
+  hXiXi2D->Add(hXiXiOS2D, hXiXiSS2D, 1, -1);
+  hXiXi2D->SetName("hXiXi2D");
+  hXiXi2D->SetTitle("OS - SS #Xi - #Xi (1 GeV/#it{c} < #it{p}_{T,trigger} < 10 GeV/#it{c})");
+
+  TH1D *hXiXiOS = hXiXiOS2D->ProjectionX("hXiXiOS");
+  hXiXiOS->SetTitle("OS #Xi - #Xi (1 GeV/#it{c} < #it{p}_{T,trigger} < 10 GeV/#it{c});#Delta#varphi;1/#it{N}_{triggers} d#it{N}/d(#Delta#varphi) (rad^{-1})");
+  hXiXiOS->Scale(20. / (2 * M_PI)); // scale by bin width for correct dN/d(dphi)
+  TH1D *hXiXiSS = hXiXiSS2D->ProjectionX("hXiXiSS");
+  hXiXiSS->SetTitle("SS #Xi - #Xi (1 GeV/#it{c} < #it{p}_{T,trigger} < 10 GeV/#it{c});#Delta#varphi;1/#it{N}_{triggers} d#it{N}/d(#Delta#varphi) (rad^{-1})");
+  hXiXiSS->Scale(20. / (2 * M_PI)); // scale by bin width for correct dN/d(dphi)
+  TH1D *hXiXisubtracted = hXiXi2D->ProjectionX("hXiXisubtracted");
+  hXiXisubtracted->SetTitle("OS - SS #Xi - #Xi (1 GeV/#it{c} < #it{p}_{T,trigger} < 10 GeV/#it{c});#Delta#varphi;1/#it{N}_{triggers} d#it{N}/d(#Delta#varphi) (rad^{-1})");
+  hXiXisubtracted->Scale(20. / (2 * M_PI)); // scale by bin width for correct dN/d(dphi)
 
   ///// RUN 2 COMPARISONS
 
   const double datapointsOS[21] = {0, 0.00772392, 0.00763424, 0.0102429, 0.00970434, 0.0147818, 0.0131757, 0.0114212, 0.00877517, 0.00667961, 0.00695319, 0.00729105, 0.00602286, 0.00449109, 0.00573827, 0.00629415, 0.00505972, 0.00429942, 0.00724581, 0.00570471, 0.00750361};
   const double staterrorsOS[21] = {0, 0.00140528, 0.00105404, 0.00141499, 0.000748423, 0.00128475, 0.00101308, 0.00136926, 0.00085206, 0.000793002, 0.000902522, 0.000955686, 0.000843041, 0.000948397, 0.000851573, 0.000820212, 0.00101491, 0.00104776, 0.000878481, 0.000767664, 0.00100554};
-  TH1D* hRun2OS = new TH1D(*hDPhiOScorrected);
+  TH1D* hRun2OS = new TH1D(*hXiXiOS);
   hRun2OS->SetName("hRun2OS");
   hRun2OS->SetTitle("Run 2 OS #Xi - #Xi");
   hRun2OS->SetContent(datapointsOS);
   hRun2OS->SetError(staterrorsOS);
   hRun2OS->SetStats(false);
   hRun2OS->SetLineColor(kRed);
-  TCanvas *c = new TCanvas("c");
-  c->cd();
-  TRatioPlot *hRun2OSRatio = new TRatioPlot(hDPhiOScorrected, hRun2OS, "divsym");
+  TRatioPlot *hRun2OSRatio = new TRatioPlot(hXiXiOS, hRun2OS, "divsym");
   hRun2OSRatio->SetH1DrawOpt("E");
   hRun2OSRatio->Draw("nogrid");
   hRun2OSRatio->GetUpperRefYaxis()->SetRangeUser(0., 0.02);
@@ -587,7 +682,7 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
   hRun2OSRatio->GetLowYaxis()->SetNdivisions(505);
   TLegend *legendOS = new TLegend(0.55, 0.75, 0.75, 0.85);
   hRun2OSRatio->GetUpperPad()->cd(); // draw legend in upper pad
-  legendOS->AddEntry(hDPhiOScorrected, "this analysis");
+  legendOS->AddEntry(hXiXiOS, "this analysis");
   legendOS->AddEntry(hRun2OS, "run 2");
   legendOS->Draw();
   c->Write("cOSRatio");
@@ -596,14 +691,14 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
   
   const double datapointsSS[21] = {0, 0.00314547, 0.00574206, 0.0049273, 0.00321404, 0.00306671, 0.00141205, 0.00276105, 0.00273416, 0.00406806, 0.00376302, 0.00390338, 0.0048735, 0.00529755, 0.00359733, 0.0080713, 0.00588222, 0.00452432, 0.00337606, 0.00428579, 0.00485876};
   const double staterrorsSS[21] = {0, 0.000688171, 0.00119578, 0.000846638, 0.00051905, 0.000517229, 0.00148369, 0.000717417, 0.000644928, 0.000621341, 0.000561713, 0.000813817, 0.00107704, 0.000920041, 0.00073849, 0.00245958, 0.000746747, 0.000804554, 0.000785611, 0.000791499, 0.000860004};
-  TH1D* hRun2SS = new TH1D(*hDPhiSScorrected);
+  TH1D* hRun2SS = new TH1D(*hXiXiSS);
   hRun2SS->SetName("hRun2SS");
   hRun2SS->SetTitle("Run 2 SS #Xi - #Xi");
   hRun2SS->SetContent(datapointsSS);
   hRun2SS->SetError(staterrorsSS);
   hRun2SS->SetStats(false);
   hRun2SS->SetLineColor(kRed);
-  TRatioPlot *hRun2SSRatio = new TRatioPlot(hDPhiSScorrected, hRun2SS, "divsym");
+  TRatioPlot *hRun2SSRatio = new TRatioPlot(hXiXiSS, hRun2SS, "divsym");
   hRun2SSRatio->SetH1DrawOpt("E");
   hRun2SSRatio->Draw("nogrid");
   hRun2SSRatio->GetUpperRefYaxis()->SetRangeUser(0., 0.01);
@@ -611,7 +706,7 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
   hRun2SSRatio->GetLowYaxis()->SetNdivisions(505);
   TLegend *legendSS = new TLegend(0.2, 0.75, 0.4, 0.85);
   hRun2SSRatio->GetUpperPad()->cd(); // draw legend in upper pad
-  legendSS->AddEntry(hDPhiSScorrected, "this analysis");
+  legendSS->AddEntry(hXiXiSS, "this analysis");
   legendSS->AddEntry(hRun2SS, "run 2");
   legendSS->Draw();
   c->Write("cSSRatio");
@@ -620,14 +715,14 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
   
   const double datapoints[21] = {0, 0.00457845, 0.00189219, 0.00531563, 0.00649031, 0.0117151, 0.0117636, 0.00866012, 0.00604101, 0.00261155, 0.00319017, 0.00338767, 0.00114936, -0.000806458, 0.00214094, -0.00177715, -0.000822495, -0.000224905, 0.00386975, 0.00141892, 0.00264486};
   const double staterrors[21] = {0, 0.00156473, 0.00159401, 0.00164894, 0.000910796, 0.00138496, 0.00179657, 0.00154582, 0.00106861, 0.00100743, 0.00106305, 0.00125524, 0.00136775, 0.00132134, 0.00112718, 0.00259274, 0.00126003, 0.00132103, 0.00117852, 0.00110262, 0.00132315};
-  TH1D* hRun2 = new TH1D(*hDPhicorrected);
+  TH1D* hRun2 = new TH1D(*hXiXisubtracted);
   hRun2->SetName("hRun2");
   hRun2->SetTitle("Run 2 #Xi - #Xi");
   hRun2->SetContent(datapoints);
   hRun2->SetError(staterrors);
   hRun2->SetStats(false);
   hRun2->SetLineColor(kRed);
-  TRatioPlot *hRun2Ratio = new TRatioPlot(hDPhicorrected, hRun2, "divsym");
+  TRatioPlot *hRun2Ratio = new TRatioPlot(hXiXisubtracted, hRun2, "divsym");
   // TH1D* hRun2Ratio = new TH1D(*hDPhicorrected);
   hRun2Ratio->SetH1DrawOpt("E");
   hRun2Ratio->Draw("nogrid");
@@ -636,7 +731,7 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
   hRun2Ratio->GetLowYaxis()->SetNdivisions(505);
   TLegend *legend2 = new TLegend(0.55, 0.75, 0.75, 0.85);
   hRun2Ratio->GetUpperPad()->cd(); // draw legend in upper pad
-  legend2->AddEntry(hDPhicorrected, "this analysis");
+  legend2->AddEntry(hXiXisubtracted, "this analysis");
   legend2->AddEntry(hRun2, "run 2");
   legend2->Draw();
   c->Write("cRun2Ratio");
@@ -645,270 +740,126 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
 
   ///// END RUN 2 COMPARISONS
 
-  cout << "Xi-Xi yield " << hDPhicorrected->Integral() << endl;
+  cout << "Xi-Xi yield " << hXiXisubtracted->Integral() << endl;
 
-  // test projection of Xi-Xi OS onto 2D dphi-dy
-  axranges aOmPtIntegrated{{corr::ptTrigg, {1., 5.0}}, {corr::ptAssoc, {1., 5.0}},
-                        //  {corr::dY, {-1., 1.}},
-                         {corr::invMassTrigg, {1.66, 1.685}}, {corr::invMassAssoc, {1.31, 1.33}}
-  };
-  axranges aOmPtIntMass{{mass::pT, {1., 5.0}}, 
-                      // {mass::y, {-0.5, 0.5}},
-                      {mass::invMass, {1.66, 1.685}}
-  };
-
-  TH1D *hOmMassPtInt = project(hEffCorrOmegaMass, mass::invMass, aOmPtIntMass);
-  hOmMassPtInt->SetName("hEffOmMass_pTint");
-  double nOmTriggers = hOmMassPtInt->Integral();
-
-  TH2D *h2DOmXiOS = project2D(hOmXiOS, corr::dPhi, corr::dY, aOmPtIntegrated);
-  h2DOmXiOS->SetName("h2DOmXiOS");
-  h2DOmXiOS->Scale(1. / nOmTriggers);
-  h2DOmXiOS->Scale(20. / (2 * M_PI)); // scale by bin width for correct dN/d(dphi)
-  // h2DOmXiOS->Rebin2D(1,5);
-  TH2D *h2DOmXiSS = project2D(hOmXiSS, corr::dPhi, corr::dY, aOmPtIntegrated);
-  h2DOmXiSS->SetName("h2DOmXiSS");
-  h2DOmXiSS->Scale(1. / nOmTriggers);
-  h2DOmXiSS->Scale(20. / (2 * M_PI)); // scale by bin width for correct dN/d(dphi)
-  // h2DOmXiSS->Rebin2D(1,5);
-  TH2D *h2DOmXi = new TH2D(*h2DOmXiOS);
-  h2DOmXi->Add(h2DOmXiOS, h2DOmXiSS, 1, -1);
-  h2DOmXi->SetName("h2DOmXi");
-  h2DOmXi->ProjectionX("hDYOmXi");
-  h2DOmXi->ProjectionY("hDPhiOmXi");
-
-  // quick pT integrated ME correction applied
-  TH1D* hDYOSOmXicorrected = project(hOmXiOS, corr::dY, aOmPtIntegrated);
-  hDYOSOmXicorrected->SetName("hDYOSOmXicorrected");
-  hDYOSOmXicorrected->Scale(1. / nOmTriggers);
-  hDYOSOmXicorrected->Divide(hME_vector[2]);
-  TH1D* hDYSSOmXicorrected = project(hOmXiSS, corr::dY, aOmPtIntegrated);
-  hDYSSOmXicorrected->SetName("hDYSSOmXicorrected");
-  hDYSSOmXicorrected->Scale(1. / nOmTriggers);
-  hDYSSOmXicorrected->Divide(hME_vector[3]);
-  TH1D *hDYOmXicorrected = new TH1D(*hDYOSOmXicorrected);
-  hDYOmXicorrected->Add(hDYOSOmXicorrected, hDYSSOmXicorrected, 1, -1);
-  hDYOmXicorrected->SetName("hDYOmXicorrected");
-  
-  TH1D* hDPhiOSOmXicorrected = project(hOmXiOS, corr::dPhi, aOmPtIntegrated);
-  hDPhiOSOmXicorrected->SetName("hDPhiOSOmXicorrected");
-  hDPhiOSOmXicorrected->Scale(1. / nOmTriggers);
-  hDPhiOSOmXicorrected->Rebin(9);
-  hDPhiOSOmXicorrected->Divide(hME_vector[0]);
-  TH1D* hDPhiSSOmXicorrected = project(hOmXiSS, corr::dPhi, aOmPtIntegrated);
-  hDPhiSSOmXicorrected->SetName("hDPhiSSOmXicorrected");
-  hDPhiSSOmXicorrected->Scale(1. / nOmTriggers);
-  hDPhiSSOmXicorrected->Rebin(9);
-  hDPhiSSOmXicorrected->Divide(hME_vector[1]);
-  TH1D *hDPhiOmXicorrected = new TH1D(*hDPhiOSOmXicorrected);
-  hDPhiOmXicorrected->Add(hDPhiOSOmXicorrected, hDPhiSSOmXicorrected, 1, -1);
-  hDPhiOmXicorrected->SetName("hDPhiOmXicorrected");
-  hDPhiOmXicorrected->SetTitle("OS - SS #Omega - #Xi (1 GeV/#it{c} < #it{p}_{T,trigger} < 5 GeV/#it{c})");
-  hDPhiOmXicorrected->GetYaxis()->SetTitle("1/#it{N}_{triggers} d#it{N}/d(#Delta#varphi) (rad^{-1})");
-  hDPhiOmXicorrected->SetStats(false);
-  cout << "Om-Xi yield " << hDPhiOmXicorrected->Integral() << endl;
-
-  // Let's do inv-mass projections
-  axranges massXi{};
-  axranges massBoth{};
-  axranges massOm{};
-  TH1D *hInvMassXiXi = project(hXiXiOS, corr::invMassTrigg, massXi);
-  hInvMassXiXi->SetName("hInvMassXiXi");
-  hInvMassXiXi->SetTitle("inv Mass of Xi (bachelor == pion and != kaon)");
-  TH1D *hInvMassXiOm = project(hXiXiOS, corr::invMassTrigg, massOm);
-  hInvMassXiOm->SetName("hInvMassXiOm");
-  hInvMassXiOm->SetTitle("inv Mass of Xi (bachelor == kaon and != pion)");
-  TH1D *hInvMassXiBoth = project(hXiXiOS, corr::invMassTrigg, massBoth);
-  hInvMassXiBoth->SetName("hInvMassXiBoth");
-  hInvMassXiBoth->SetTitle("inv Mass of Xi (bachelor consistent with both pion, kaon)");
-
-  TH1D *hInvMassOmXi = project(hOmXiOS, corr::invMassTrigg, massXi);
-  hInvMassOmXi->SetName("hInvMassOmXi");
-  hInvMassOmXi->SetTitle("inv Mass of Omega (bachelor == pion and != kaon)");
-  TH1D *hInvMassOmOm = project(hOmXiOS, corr::invMassTrigg, massOm);
-  hInvMassOmOm->SetName("hInvMassOmOm");
-  hInvMassOmOm->SetTitle("inv Mass of Omega (bachelor == kaon and != pion)");
-  TH1D *hInvMassOmBoth = project(hOmXiOS, corr::invMassTrigg, massBoth);
-  hInvMassOmBoth->SetName("hInvMassOmBoth");
-  hInvMassOmBoth->SetTitle("inv Mass of Omega (bachelor consistent with both pion, kaon)");
-
-  // TODO pT spectra inv mass afhankelijk
-
-  // Xi invMass for different pT:
-  axranges massLowpT{{corr::ptTrigg, {pTmin, 4.0}}};//, {selflagTrigg, {0.5, 2.5}}};
-  axranges massMedpT{{corr::ptTrigg, {4.0, 8.0}}};//, {selflagTrigg, {0.5, 2.5}}};
-  axranges massHigpT{{corr::ptTrigg, {8.0, 15.0}}};//, {selflagTrigg, {0.5, 2.5}}};
-  TH1D *hInvMassXiLow = project(hXiXiOS, corr::invMassTrigg, massLowpT);
-  hInvMassXiLow->SetName("hInvMassXiLow");
-  hInvMassXiLow->SetTitle("inv Mass of Xi trigger (w PID response, 0 < pT < 4)");
-  TH1D *hInvMassXiMed = project(hXiXiOS, corr::invMassTrigg, massMedpT);
-  hInvMassXiMed->SetName("hInvMassXiMed");
-  hInvMassXiMed->SetTitle("inv Mass of Xi trigger (w PID response, 4 < pT < 8)");
-  TH1D *hInvMassXiHig = project(hXiXiOS, corr::invMassTrigg, massHigpT);
-  hInvMassXiHig->SetName("hInvMassXiHig");
-  hInvMassXiHig->SetTitle("inv Mass of Xi trigger (w PID response, 8 < pT < 15)");
+  // arrays to store sign combinations in: 
+  TH2D *array[maxPtBins - 1][7];
+  TH2D *arrayOm[maxPtBins - 1][7];
+  double signsarray[4][2] = {{-1, 1}, {1, -1}, {-1, -1}, {1, 1}}; // sign combinations
 
   for (int pTbin = 0; pTbin < maxPtBins - 1; pTbin++){
-    // old axranges, save for backup
-    // axranges aXiSig{{corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {1, pTmax}}, 
-    //                 {corr::invMassTrigg, {siglowXi[pTbin], sighighXi[pTbin]}}, {corr::invMassAssoc, {siglowXi[pTbin], sighighXi[pTbin]}}
-    // };
-    // axranges aXiBkg{{corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {1, pTmax}}, 
-    //                 {corr::invMassTrigg, {bkglowXi[pTbin], bkghighXi[pTbin]}}, {corr::invMassAssoc, {bkglowXi[pTbin], bkghighXi[pTbin]}}
-    // };
-    // axranges aOmSig{{corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {1, pTmax}}, 
-    //                 {corr::invMassTrigg, {siglowOm[pTbin], sighighOm[pTbin]}}, {corr::invMassAssoc, {siglowXi[pTbin], sighighXi[pTbin]}}
-    // };
-    // axranges aOmBkg{{corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {1, pTmax}}, 
-    //                 {corr::invMassTrigg, {bkglowOm[pTbin], bkghighOm[pTbin]}}, {corr::invMassAssoc, {bkglowXi[pTbin], bkghighXi[pTbin]}}
-    // };
-
-    axranges aXiSig{{corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {1, pTmax}}, 
-                    {corr::invMassTrigg, {sigXi[pTbin][0], sigXi[pTbin][1]}}, {corr::invMassAssoc, {sigXi[pTbin][0], sigXi[pTbin][1]}}
-    };
-    axranges aXiBkg{{corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {1, pTmax}}, 
-                    {corr::invMassTrigg, {bkgXi[pTbin][0], bkgXi[pTbin][1]}}, {corr::invMassAssoc, {bkgXi[pTbin][0], bkgXi[pTbin][1]}}
-    };
-    axranges aOmSig{{corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {1, pTmax}}, 
-                    {corr::invMassTrigg, {sigOm[pTbin][0], sigOm[pTbin][1]}}, {corr::invMassAssoc, {sigXi[pTbin][0], sigXi[pTbin][1]}}
-    };
-    axranges aOmBkg{{corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {1, pTmax}}, 
-                    {corr::invMassTrigg, {bkgOm[pTbin][0], bkgOm[pTbin][1]}}, {corr::invMassAssoc, {bkgXi[pTbin][0], bkgXi[pTbin][1]}}
-    };
-
     XiXidir->cd();
-    // ad hoc Y projection
-    TH1D *hXiYOS = project(hXiXiOS, corr::dY, aXiSig);
-    hXiYOS->SetName("hXiYOS"+pTlabels[pTbin]);
-    hXiYOS->Scale(1. / NTrigXi[pTbin]); 
-    hXiYOS->SetTitle("#Xi-#Xi for " + pTlabels[pTbin] + " < p_{T,Trigger} < " + pTlabels[pTbin + 1]);
-    hXiYOS->SetYTitle("pairs OS");
-    hXiYOS->SetStats(kFALSE);
-    hXiYOS->Rebin(5);
-    hXiYOS->GetYaxis()->SetRangeUser(0, 1.1*hXiYOS->GetMaximum());
-    hXiYOS->SetLineWidth(3);
-    // Xi-Xi sig
-    TH1D *hXiOS = project(hXiXiOS, corr::dPhi, aXiSig);
-    hXiOS->SetName("hXiOS"+pTlabels[pTbin]);
-    hXiOS->Scale(1. / NTrigXi[pTbin]);
-    hXiOS->SetTitle("#Xi-#Xi for " + pTlabels[pTbin] + " < p_{T,Trigger} < " + pTlabels[pTbin + 1]);
-    hXiOS->SetYTitle("pairs OS");
-    hXiOS->SetStats(kFALSE);
-    hXiOS->Rebin(5);
-    hXiOS->GetYaxis()->SetRangeUser(0, 1.1*hXiOS->GetMaximum());
-    hXiOS->SetLineWidth(3);
-    TH1D *hXiSS = project(hXiXiSS, corr::dPhi, aXiSig);
-    hXiSS->SetName("hXiSS"+pTlabels[pTbin]);
-    hXiSS->Scale(1. / NTrigXi[pTbin]);
-    hXiSS->SetTitle("#Xi-#Xi for " + pTlabels[pTbin] + " < p_{T,Trigger} < " + pTlabels[pTbin + 1]);
-    hXiSS->SetYTitle("pairs SS");
-    hXiSS->SetStats(kFALSE);
-    hXiSS->Rebin(5);
-    hXiSS->GetYaxis()->SetRangeUser(0, 1.1*hXiSS->GetMaximum());
-    hXiSS->SetLineWidth(3);
-    TH1D *hXi = new TH1D(*hXiOS);
-    hXi->Add(hXiOS, hXiSS, 1, -1);
-    // if (pTbin>0) h112->Add(hXi);
-    hXi->SetName("hXi"+pTlabels[pTbin]);
-    hXi->SetTitle("#Xi-#Xi for " + pTlabels[pTbin] + " < p_{T,Trigger} < " + pTlabels[pTbin + 1]);
-    hXi->SetYTitle("pairs (OS - SS)");
-    hXi->SetStats(kFALSE);
-    hXi->SetLineWidth(3);
-    // Xi-Xi bkg
-    // TH1D *hXiOSbkg = project(hXiXiOS, corr::dPhi, aXiBkg);
-    // hXiOSbkg->SetName("hXiOSbkg"+pTlabels[pTbin]);
-    // TH1D *hXiSSbkg = project(hXiXiSS, corr::dPhi, aXiBkg);
-    // hXiSSbkg->SetName("hXiSSbkg"+pTlabels[pTbin]);
-    // TH1D *hXibkg = new TH1D(*hXiOSbkg);
-    // hXibkg->Add(hXiOSbkg, hXiSSbkg, 1, -1);
-    // hXibkg->SetName("hXibkg"+pTlabels[pTbin]);
+    int count = 0;
+    for(auto signs : signsarray){
+      TString triggerSign, assocSign;
+      signs[0] < 0 ? triggerSign = "-" : triggerSign = "+";
+      signs[1] < 0 ? assocSign = "-" : assocSign = "+";
+      axranges aXiSig{{corr::signTrigg, {signs[0], signs[0]}}, {corr::signAssoc, {signs[1], signs[1]}},
+                      {corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {pTmin, pTmax}},
+                      {corr::dY, {-1., 1.}},
+                      {corr::invMassTrigg, {sigXi[pTbin][0], sigXi[pTbin][1]}}, {corr::invMassAssoc, {sigXi[pTbin][0], sigXi[pTbin][1]}}
+      };
+      axranges aXiOmSig{{corr::signTrigg, {signs[0], signs[0]}}, {corr::signAssoc, {signs[1], signs[1]}},
+                      {corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {pTmin, pTmax}},
+                      {corr::dY, {-1., 1.}},
+                      {corr::invMassTrigg, {sigXi[pTbin][0], sigXi[pTbin][1]}}, {corr::invMassAssoc, {sigOm[pTbin][0], sigOm[pTbin][1]}}
+      };
+      // trigger normalization
+      axranges aXiMass{{mass::pT, {pTbins[pTbin], pTbins[pTbin+1]}}, 
+                      {mass::sign, {signs[0], signs[0]}},
+                      {mass::invMass, {sigXi[0][0], sigXi[0][1]}}
+      };
+      TH1D *hMass = project(hEffCorrXiMass, mass::invMass, aXiMass);
+      double nTriggers = hMass->Integral();
+      hMass->Delete();
+      // trigger normalization
 
-    // Om-Xi sig
-    OmXidir->cd();
-    TH1D *hOmOS = project(hOmXiOS, corr::dPhi, aOmSig);
-    hOmOS->SetName("hOmOS"+pTlabels[pTbin]);
-    hOmOS->Scale(1./NTrigOm[pTbin]);
-    hOmOS->SetTitle("#Omega-#Xi for " + pTlabels[pTbin] + " < p_{T,Trigger} < " + pTlabels[pTbin + 1]);
-    hOmOS->SetYTitle("pairs OS");
-    hOmOS->SetStats(kFALSE);
-    hOmOS->Rebin(5);
-    hOmOS->GetYaxis()->SetRangeUser(0, 1.1*hOmOS->GetMaximum());
-    hOmOS->SetLineWidth(3);
-    TH1D *hOmSS = project(hOmXiSS, corr::dPhi, aOmSig);
-    hOmSS->SetName("hOmSS"+pTlabels[pTbin]);
-    hOmSS->Scale(1./NTrigOm[pTbin]);
-    hOmSS->SetTitle("#Omega-#Xi for " + pTlabels[pTbin] + " < p_{T,Trigger} < " + pTlabels[pTbin + 1]);
-    hOmSS->SetYTitle("pairs SS");
-    hOmSS->SetStats(kFALSE);
-    hOmSS->Rebin(5);
-    hOmSS->GetYaxis()->SetRangeUser(0, 1.1*hOmSS->GetMaximum());
-    hOmSS->SetLineWidth(3);
-    TH1D *hOm = new TH1D(*hOmOS);
-    hOm->Add(hOmOS, hOmSS, 1, -1);
-    hOm->SetName("hOm"+pTlabels[pTbin]);
-    hOm->SetTitle("#Omega-#Xi for " + pTlabels[pTbin] + " < p_{T,Trigger} < " + pTlabels[pTbin + 1]);
-    hOm->SetYTitle("pairs (OS - SS)");
-    hOm->SetStats(kFALSE);
-    hOm->SetLineWidth(3);
-    // Om-Xi bkg
-    // TH1D *hOmOSbkg = project(hOmXiOS, corr::dPhi, aOmBkg);
-    // hOmOSbkg->SetName("hOmOSbkg"+pTlabels[pTbin]);
-    // TH1D *hOmSSbkg = project(hOmXiSS, corr::dPhi, aOmBkg);
-    // hOmSSbkg->SetName("hOmSSbkg"+pTlabels[pTbin]);
-    // TH1D *hOmbkg = new TH1D(*hOmOSbkg);
-    // hOmbkg->Add(hOmOSbkg, hOmSSbkg, 1, -1);
-    // hOmbkg->SetName("hOmbkg"+pTlabels[pTbin]);
+      TH2D *h = new TH2D();
+      h = project2D(hXiXi, corr::dY, corr::dPhi, aXiSig);
+      h->SetName("hXi"+triggerSign+"Xi"+assocSign+"pT_"+pTlabels[pTbin]+"_"+pTlabels[pTbin+1]);
+      h->RebinX(9);
+      h->Scale(1. / nTriggers); 
+      double ddphi = h->GetNbinsX()/(h->GetXaxis()->GetXmax() - h->GetXaxis()->GetXmin()); 
+      double ddy = h->GetNbinsY()/(h->GetYaxis()->GetXmax() - h->GetYaxis()->GetXmin());
+      h->Scale(ddphi * ddy); // scale by bin width - note to take this into account when projecting later
+      h->Divide(hMEXiXi2D);
+      h->SetTitle("#Xi^{"+triggerSign+"} - #Xi^{"+assocSign+"} ("+pTlabels[pTbin]+" GeV/#it{c} < #it{p}_{T,trigger} < "+pTlabels[pTbin+1]+" GeV/#it{c});#Delta#varphi;#Delta y;1/#it{N}_{triggers} d#it{N}/d(#Delta#varphi) (rad^{-1})");
+      h->SetStats(false);
+      array[pTbin][count] = h;
 
-    // Let's do Om Om
-    axranges aOmOmSig{{corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {pTmin, pTmax}}, 
-                    {corr::invMassTrigg, {sigOm[pTbin][0], sigOm[pTbin][1]}}, {corr::invMassAssoc, {sigOm[pTbin][0], sigOm[pTbin][1]}}
-    };
-    axranges aOmOmBkg{{corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {pTmin, pTmax}}, 
-                    {corr::invMassTrigg, {bkgOm[pTbin][0], bkgOm[pTbin][1]}}, {corr::invMassAssoc, {bkgOm[pTbin][0], bkgOm[pTbin][1]}}
-    };
-    // Om-Om sig
-    OmOmdir->cd();
-    TH1D *hOmOmOSsig = project(hOmOmOS, corr::dPhi, aOmOmSig);
-    hOmOmOSsig->SetName("hOmOmOSsig"+pTlabels[pTbin]);
-    hOmOmOSsig->Scale(1. / NTrigOm[pTbin]);
-    hOmOmOSsig->SetTitle("#Omega-#Omega for " + pTlabels[pTbin] + " < p_{T,Trigger} < " + pTlabels[pTbin + 1]);
-    hOmOmOSsig->SetYTitle("pairs OS");
-    hOmOmOSsig->SetStats(kFALSE);
-    hOmOmOSsig->Rebin(5);
-    hOmOmOSsig->GetYaxis()->SetRangeUser(0, 1.1*hOmOmOSsig->GetMaximum());
-    hOmOmOSsig->SetLineWidth(3);
-    TH1D *hOmOmSSsig = project(hOmOmSS, corr::dPhi, aOmOmSig);
-    hOmOmSSsig->SetName("hOmOmSSsig"+pTlabels[pTbin]);
-    hOmOmSSsig->Scale(1. / NTrigOm[pTbin]);
-    hOmOmSSsig->SetTitle("#Omega-#Omega for " + pTlabels[pTbin] + " < p_{T,Trigger} < " + pTlabels[pTbin + 1]);
-    hOmOmSSsig->SetYTitle("pairs SS");
-    hOmOmSSsig->SetStats(kFALSE);
-    hOmOmSSsig->Rebin(5);
-    hOmOmSSsig->GetYaxis()->SetRangeUser(0, 1.1*hOmOmSSsig->GetMaximum());
-    hOmOmSSsig->SetLineWidth(3);
-    TH1D *hOmOmsig = new TH1D(*hOmOmOSsig);
-    hOmOmsig->Add(hOmOmOSsig, hOmOmSSsig, 1, -1);
-    hOmOmsig->SetName("hOmOmsig"+pTlabels[pTbin]);
-    hOmOmsig->SetTitle("#Omega-#Omega for " + pTlabels[pTbin] + " < p_{T,Trigger} < " + pTlabels[pTbin + 1]);
-    hOmOmsig->SetYTitle("pairs (OS - SS)");
-    hOmOmsig->SetStats(kFALSE);
-    // hOmOmsig->Rebin(5);
-    hOmOmsig->SetLineWidth(3);
-    // Om-Om bkg
-    TH1D *hOmOmOSbkg = project(hOmOmOS, corr::dPhi, aOmOmBkg);
-    hOmOmOSbkg->SetName("hOmOmOSbkg"+pTlabels[pTbin]);
-    TH1D *hOmOmSSbkg = project(hOmOmSS, corr::dPhi, aOmOmBkg);
-    hOmOmSSbkg->SetName("hOmOmSSbkg"+pTlabels[pTbin]);
-    TH1D *hOmOmbkg = new TH1D(*hOmOmOSbkg);
-    hOmOmbkg->Add(hOmOmOSbkg, hOmOmSSbkg, 1, -1);
-    hOmOmbkg->SetName("hOmOmbkg"+pTlabels[pTbin]);
-    // sig-sig
-      // do Xi, Om, both (OS, SS, subtracted)
-      // then do logic with Xi + both, Om + both
-    // repeat exercise for bkg-bkg
-    // remember to save histos in relevant dirs
+      TH2D *hOm = new TH2D();
+      hOm = project2D(hXiOm, corr::dY, corr::dPhi, aXiOmSig);
+      hOm->SetName("hXi"+triggerSign+"Om"+assocSign+"pT_"+pTlabels[pTbin]+"_"+pTlabels[pTbin+1]);
+      hOm->RebinX(9);
+      hOm->Scale(1. / nTriggers); 
+      ddphi = h->GetNbinsX()/(hOm->GetXaxis()->GetXmax() - hOm->GetXaxis()->GetXmin()); 
+      ddy = h->GetNbinsY()/(hOm->GetYaxis()->GetXmax() - hOm->GetYaxis()->GetXmin());
+      hOm->Scale(ddphi * ddy); // scale by bin width - note to take this into account when projecting later
+      hOm->Divide(hMEXiXi2D);
+      hOm->SetTitle("#Xi^{"+triggerSign+"} - #Om^{"+assocSign+"} ("+pTlabels[pTbin]+" GeV/#it{c} < #it{p}_{T,trigger} < "+pTlabels[pTbin+1]+" GeV/#it{c});#Delta#varphi;#Delta y;1/#it{N}_{triggers} d#it{N}/d(#Delta#varphi) (rad^{-1})");
+      hOm->SetStats(false);
+      arrayOm[pTbin][count] = hOm;
+      count++;
+    }
+    // do subtractions and averages:
+    TH2D *hXiOS = new TH2D(*array[0][0]); // use first correlation histogram as template
+    TH2D *hXiSS = new TH2D(*array[0][0]); // use first correlation histogram as template
+    hXiOS->Add(array[pTbin][0], array[pTbin][1], .5, .5);
+    hXiOS->SetName("hXiOS_pT_"+pTlabels[pTbin]+"_"+pTlabels[pTbin+1]);
+    hXiOS->SetTitle("");
+    array[pTbin][4] = hXiOS;
+    hXiSS->Add(array[pTbin][2], array[pTbin][3], .5, .5);
+    hXiSS->SetName("hXiSS_pT_"+pTlabels[pTbin]+"_"+pTlabels[pTbin+1]);
+    hXiSS->SetTitle("");
+    array[pTbin][5] = hXiSS;
+    TH2D *hXiSub = new TH2D(*hXiOS); // use first correlation histogram as template
+    hXiSub->Add(hXiOS, hXiSS, 1, -1);
+    hXiSub->SetName("hXiSub_pT_"+pTlabels[pTbin]+"_"+pTlabels[pTbin+1]);
+    array[pTbin][6] = hXiSub;
+
+    TH2D *hXiOmOS = new TH2D(*arrayOm[0][0]); // use first correlation histogram as template
+    TH2D *hXiOmSS = new TH2D(*arrayOm[0][0]); // use first correlation histogram as template
+    hXiOmOS->Add(arrayOm[pTbin][0], arrayOm[pTbin][1], .5, .5);
+    hXiOmOS->SetName("hXiOmOS_pT_"+pTlabels[pTbin]+"_"+pTlabels[pTbin+1]);
+    hXiOmOS->SetTitle("");
+    arrayOm[pTbin][4] = hXiOmOS;
+    hXiOmSS->Add(arrayOm[pTbin][2], arrayOm[pTbin][3], .5, .5);
+    hXiOmSS->SetName("hXiOmSS_pT_"+pTlabels[pTbin]+"_"+pTlabels[pTbin+1]);
+    hXiOmSS->SetTitle("");
+    arrayOm[pTbin][5] = hXiOmSS;
+    TH2D *hXiOmSub = new TH2D(*hXiOmOS); // use first correlation histogram as template
+    hXiOmSub->Add(hXiOmOS, hXiOmSS, 1, -1);
+    hXiOmSub->SetName("hXiOmSub_pT_"+pTlabels[pTbin]+"_"+pTlabels[pTbin+1]);
+    arrayOm[pTbin][6] = hXiOmSub;
+    TH1D* hXiOmproj = hXiOmSub->ProjectionX("hXiOmproj");
+
+    if(makePDF){
+      for (TH2D* h : array[pTbin]){
+        if(!h) {
+          cout << "found null histogram in array while drawing, skipping it..." << endl;
+          continue;
+        }
+        h->GetZaxis()->SetTitleOffset(1.5);
+        h->Draw("surf1");
+        TString hname = h->GetName();
+
+        float x = 0.10;
+        float y = 0.90;
+        float spacing = 0.05;
+        TLatex latex;
+        latex.SetNDC();
+        latex.SetTextSize(0.035);
+        latex.DrawLatex(x, y, h->GetTitle());
+        latex.DrawLatex(x, y - spacing, "1.0 GeV/#it{c} < #it{p}_{T,assoc} < #it{p}_{T,trigger}");
+        latex.DrawLatex(x, y - 2*spacing, "pp, #sqrt{s} = 13 TeV");
+
+        h->SetTitle("");
+        c->Print("figures/corr/"+hname+".pdf");
+        c->Clear();
+      }
+    }
   }
- 
+
   outputFile->cd();
   outputFile->Write();
   outputFile->Close();
