@@ -1,0 +1,290 @@
+{
+    "timestamp-task": {
+        "verbose": "false",
+        "rct-path": "RCT\/Info\/RunInformation",
+        "orbit-reset-path": "CTP\/Calib\/OrbitReset",
+        "ccdb-url": "http:\/\/alice-ccdb.cern.ch",
+        "isRun2MC": "-1"
+    },
+    "bc-selection-task": {
+        "processRun2": "false",
+        "processRun3": "true"
+    },
+    "lumi-task": {
+        "processRun2": "true",
+        "processRun3": "false"
+    },
+    "strangeness-builder": {
+        "enabledTables": {
+            "labels_rows": [
+                "V0Indices",
+                "V0CoresBase",
+                "V0Covs",
+                "CascIndices",
+                "KFCascIndices",
+                "TraCascIndices",
+                "StoredCascCores",
+                "StoredKFCascCores",
+                "StoredTraCascCores",
+                "CascCovs",
+                "KFCascCovs",
+                "TraCascCovs",
+                "V0TrackXs",
+                "CascTrackXs",
+                "CascBBs",
+                "V0DauCovs",
+                "V0DauCovIUs",
+                "V0TraPosAtDCAs",
+                "V0TraPosAtIUs",
+                "V0Ivanovs",
+                "McV0Labels",
+                "V0MCCores",
+                "V0CoreMCLabels",
+                "V0MCCollRefs",
+                "McCascLabels",
+                "McKFCascLabels",
+                "McTraCascLabels",
+                "McCascBBTags",
+                "CascMCCores",
+                "CascCoreMCLabels",
+                "CascMCCollRefs",
+                "CascToTraRefs",
+                "CascToKFRefs",
+                "TraToCascRefs",
+                "KFToCascRefs",
+                "V0FoundTags",
+                "CascFoundTags"
+            ],
+            "labels_cols": [
+                "enable"
+            ],
+            "values": [
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ],
+                [
+                    "-1"
+                ]
+            ]
+        },
+        "ccdb": {
+            "ccdb-url": "http:\/\/alice-ccdb.cern.ch",
+            "grpPath": "GLO\/GRP\/GRP",
+            "grpmagPath": "GLO\/Config\/GRPMagField",
+            "lutPath": "GLO\/Param\/MatLUT",
+            "geoPath": "GLO\/Config\/GeometryAligned"
+        },
+        "mc_findableMode": "0",
+        "v0BuilderOpts": {
+            "generatePhotonCandidates": "false",
+            "minCrossedRows": "50",
+            "dcanegtopv": "0.100000001",
+            "dcapostopv": "0.100000001",
+            "v0cospa": "0.94999999999999996",
+            "dcav0dau": "1",
+            "v0radius": "0.899999976",
+            "maxDaughterEta": "5",
+            "mc_populateV0MCCoresSymmetric": "false",
+            "mc_populateV0MCCoresAsymmetric": "true",
+            "mc_treatPiToMuDecays": "true",
+            "mc_rapidityWindow": "1.0",
+            "mc_addGeneratedK0Short": "true",
+            "mc_addGeneratedLambda": "true",
+            "mc_addGeneratedAntiLambda": "true",
+            "mc_addGeneratedGamma": "false",
+            "mc_addGeneratedGammaMakeCollinear": "true",
+            "mc_findableDetachedV0": "false"
+        },
+        "cascadeBuilderOpts": {
+            "useCascadeMomentumAtPrimVtx": "false",
+            "minCrossedRows": "50",
+            "dcabachtopv": "0.0500000007",
+            "cascradius": "0.899999976",
+            "casccospa": "0.949999988",
+            "dcacascdau": "1",
+            "lambdaMassWindow": "0.00999999978",
+            "maxDaughterEta": "0.8",
+            "kfTuneForOmega": "false",
+            "kfConstructMethod": "2",
+            "kfUseV0MassConstraint": "true",
+            "kfUseCascadeMassConstraint": "false",
+            "kfDoDCAFitterPreMinimV0": "true",
+            "kfDoDCAFitterPreMinimCasc": "true",
+            "mc_populateCascMCCoresSymmetric": "false",
+            "mc_populateCascMCCoresAsymmetric": "true",
+            "mc_addGeneratedXiMinus": "true",
+            "mc_addGeneratedXiPlus": "true",
+            "mc_addGeneratedOmegaMinus": "true",
+            "mc_addGeneratedOmegaPlus": "true",
+            "mc_treatPiToMuDecays": "true",
+            "mc_rapidityWindow": "1.0",
+            "mc_findableDetachedCascade": "false"
+        },
+        "processRealData": "false",
+        "processRealDataRun2": "false",
+        "processMonteCarlo": "true",
+        "processMonteCarloRun2": "false"
+    },
+    "event-selection-task": {
+        "syst": "pp",
+        "isMC": "0",
+        "processRun2": "false",
+        "processRun3": "true"
+    },
+    "multiplicity-table": {
+        "doVertexZeq": "1",
+        "processRun2": "false",
+        "processRun3": "true", 
+        "fractionOfEvents" : "2"
+    },
+    "cascade-selector": {
+        "processRecData": "false",
+        "processRecMC": "true",
+        "processGenMC": "true",
+        "doMCmatching": "true",
+        "ccdbUrl": "http:\/\/alice-ccdb.cern.ch",
+        "useTrigger": "false",
+        "triggerList": "fDoubleXi, fDoubleOmega, fOmegaXi",
+        "doTFBorderCut": "true",
+        "doSel8": "true",
+        "tpcNsigmaBachelor": "5",
+        "tpcNsigmaProton": "5",
+        "tpcNsigmaPion": "5",
+        "minTPCCrossedRows": "50",
+        "minITSClusters": "0",
+        "etaTracks": "0.8",
+        "etaCascades": "0.8",
+        "v0setting_cospa": "0.9876",
+        "v0setting_dcav0dau": "0.05",
+        "v0setting_dcapostopv": "0.04",
+        "v0setting_dcanegtopv": "0.06",
+        "v0setting_radius": "0.55",
+        "cascadesetting_cospa": "0.9947",
+        "cascadesetting_dcacascdau": "0.25",
+        "cascadesetting_dcabachtopv": "0.04",
+        "cascadesetting_cascradius": "1.01",
+        "cascadesetting_v0masswindow": "0.0116",
+        "cascadesetting_mindcav0topv": "0.03"
+    },
+    "cascade-correlations": {
+        "maxRapidity": "1.0",
+        "useTrigger": "false",
+        "triggerList": "fDoubleXi, fDoubleOmega, fOmegaXi",
+        "doTFBorderCut": "true",
+        "doSel8": "true",
+        "processSameEvent": "true",
+        "processMixedEvent": "true",
+        "processMC": "true",
+        "etaGenCascades": "0.8",
+        "zVertexCut": "10", 
+        "nMixedEvents": "10",
+        "doEfficiencyCorrection": "true",
+        "ccdbUrl": "http:\/\/alice-ccdb.cern.ch",
+        "efficiencyCCDBPath": "Users\/r\/rspijker\/2D\/24j1"
+    }
+}

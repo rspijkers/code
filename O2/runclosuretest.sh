@@ -39,20 +39,15 @@ FILELIST=$FOLDER/LHC22o_apass4_5.txt
 # see if we can run over the 22o_apass4 sample
 
 # define the config so we can conveniently pass it to each workflow
-CONFIG="-b --configuration json://ssbarconfig.json" # -b means no debug gui
+CONFIG="-b --configuration json://ssbarconfigMCclosure.json" # -b means no debug gui
 
 echo "hey it seems we are about to execute the workflow, cool!"
 # execute the entire workflow
-o2-analysis-tracks-extra-v002-converter $CONFIG | \
-o2-analysis-event-selection-service $CONFIG | o2-analysis-propagationservice $CONFIG | o2-analysis-multcenttable $CONFIG | o2-analysis-pid-tpc-service $CONFIG | \
-o2-analysis-lf-cascadecorrelations $CONFIG --aod-file "alien:///alice/data/2022/LHC22o/526641/apass7/0650/o2_ctf_run00526641_orbit0215950848_tf0000071251_epn246/001/AO2D.root" > log_o2.txt
-
-# # execute the entire workflow
-# o2-analysis-tracks-extra-v002-converter $CONFIG | \
-# o2-analysis-timestamp $CONFIG | o2-analysis-track-propagation $CONFIG | o2-analysis-event-selection $CONFIG | o2-analysis-multiplicity-table $CONFIG | \
-# o2-analysis-pid-tpc-base $CONFIG | o2-analysis-pid-tpc $CONFIG | \
-# o2-analysis-lf-strangenessbuilder $CONFIG | \
-# o2-analysis-lf-cascadecorrelations $CONFIG --aod-file "alien:///alice/data/2022/LHC22o/526641/apass7/0650/o2_ctf_run00526641_orbit0215950848_tf0000071251_epn246/001/AO2D.root" > log_o2.txt
+o2-analysis-mccollision-converter $CONFIG | o2-analysis-tracks-extra-v002-converter $CONFIG | \
+o2-analysis-timestamp $CONFIG | o2-analysis-track-propagation $CONFIG | o2-analysis-event-selection $CONFIG | o2-analysis-multiplicity-table $CONFIG | \
+o2-analysis-pid-tpc-base $CONFIG | o2-analysis-pid-tpc $CONFIG | \
+o2-analysis-lf-strangenessbuilder $CONFIG | \
+o2-analysis-lf-cascadecorrelations $CONFIG --aod-file "alien:///alice/sim/2024/LHC24j1/526641/AOD/001/AO2D.root" > log_o2.txt
 
 # --resources-monitoring 10
 # in case of skimmed datasets: o2-analysis-lf-strangeness-filter
@@ -62,8 +57,9 @@ o2-analysis-lf-cascadecorrelations $CONFIG --aod-file "alien:///alice/data/2022/
 # when running on older data use (before November 2023?): o2-analysis-tracks-extra-converter $CONFIG | 
 # when running on older data use (before December 2023?): o2-analysis-v0converter $CONFIG | 
 # @FILELIST
-# add o2-analysis-trackselection $CONFIG | ??
+# @24j1_10files.txt
 
+### 22o pass6: alien:///alice/data/2022/LHC22o/526641/apass6/0650/o2_ctf_run00526641_orbit0215379968_tf0000066791_epn157/001/AO2D.root
 ### 22o pass7?: alien:///alice/data/2022/LHC22o/526641/apass7/0650/o2_ctf_run00526641_orbit0215950848_tf0000071251_epn246/001/AO2D.root
 ### 22o pass7 skimmed: alien:///alice/data/2022/LHC22o/528543/apass7_skimmed/0950/o2_ctf_run00528543_orbit0590742144_tf0000112425_b7s02p9411/001/AO2D.root
 ### 24am skimmed: alien:///alice/data/2024/LHC24am/555976/apass1_skimmed/0610/o2_ctf_run00555976_orbit0465019808_tf0000243738_b9p10p3582/001/AO2D.root
