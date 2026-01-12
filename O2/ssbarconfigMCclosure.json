@@ -10,189 +10,88 @@
         "processRun2": "false",
         "processRun3": "true"
     },
-    "lumi-task": {
-        "processRun2": "true",
-        "processRun3": "false"
+    "tracks-extra-v002-converter": {
+        "processV000ToV002": "false",
+        "processV001ToV002": "true"
     },
-    "strangeness-builder": {
-        "enabledTables": {
-            "labels_rows": [
-                "V0Indices",
-                "V0CoresBase",
-                "V0Covs",
-                "CascIndices",
-                "KFCascIndices",
-                "TraCascIndices",
-                "StoredCascCores",
-                "StoredKFCascCores",
-                "StoredTraCascCores",
-                "CascCovs",
-                "KFCascCovs",
-                "TraCascCovs",
-                "V0TrackXs",
-                "CascTrackXs",
-                "CascBBs",
-                "V0DauCovs",
-                "V0DauCovIUs",
-                "V0TraPosAtDCAs",
-                "V0TraPosAtIUs",
-                "V0Ivanovs",
-                "McV0Labels",
-                "V0MCCores",
-                "V0CoreMCLabels",
-                "V0MCCollRefs",
-                "McCascLabels",
-                "McKFCascLabels",
-                "McTraCascLabels",
-                "McCascBBTags",
-                "CascMCCores",
-                "CascCoreMCLabels",
-                "CascMCCollRefs",
-                "CascToTraRefs",
-                "CascToKFRefs",
-                "TraToCascRefs",
-                "KFToCascRefs",
-                "V0FoundTags",
-                "CascFoundTags"
-            ],
-            "labels_cols": [
-                "enable"
-            ],
-            "values": [
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ],
-                [
-                    "-1"
-                ]
-            ]
+    "eventselection-run3": {
+        "timestamp": {
+            "verbose": "false",
+            "fatalOnInvalidTimestamp": "false",
+            "rct-path": "RCT\/Info\/RunInformation",
+            "orbit-reset-path": "CTP\/Calib\/OrbitReset",
+            "isRun2MC": "-1"
         },
+        "bcselOpts": {
+            "amIneeded": "-1",
+            "triggerBcShift": "0",
+            "ITSROFrameStartBorderMargin": "-1",
+            "ITSROFrameEndBorderMargin": "-1",
+            "TimeFrameStartBorderMargin": "-1",
+            "TimeFrameEndBorderMargin": "-1",
+            "checkRunDurationLimits": "false",
+            "maxInactiveChipsPerLayer": {
+                "values": [
+                    "8",
+                    "8",
+                    "8",
+                    "111",
+                    "111",
+                    "195",
+                    "195"
+                ]
+            },
+            "NumberOfOrbitsPerTF": "-1"
+        },
+        "evselOpts": {
+            "amIneeded": "-1",
+            "muonSelection": "0",
+            "maxDiffZvtxFT0vsPV": "1",
+            "isMC": "-1",
+            "confSigmaBCforHighPtTracks": "4",
+            "TimeIntervalForOccupancyCalculationMin": "-40",
+            "TimeIntervalForOccupancyCalculationMax": "100",
+            "TimeRangeVetoOnCollStandard": "10",
+            "TimeRangeVetoOnCollNarrow": "2",
+            "FT0CamplPerCollCutVetoOnCollInTimeRange": "8000",
+            "FT0CamplPerCollCutVetoOnCollInROF": "5000",
+            "EpsilonVzDiffVetoInROF": "0.300000012",
+            "UseWeightsForOccupancyEstimator": "true",
+            "NumberOfOrbitsPerTF": "-1",
+            "TestAlternativeBcMatching": "0",
+            "TestModifyTimeVetoOnNearbyColl": "0",
+            "TestVetoOnTRDinPast": "0",
+            "TestVzDiffNsigma": "3",
+            "TestVzDiffMargin": "0.200000003"
+        },
+        "lumiOpts": {
+            "amIneeded": "-1"
+        },
+        "ccdburl": "http:\/\/alice-ccdb.cern.ch"
+    },
+    "propagation-service": {
+        "ccdburl": "http:\/\/alice-ccdb.cern.ch",
         "ccdb": {
             "ccdb-url": "http:\/\/alice-ccdb.cern.ch",
-            "grpPath": "GLO\/GRP\/GRP",
-            "grpmagPath": "GLO\/Config\/GRPMagField",
             "lutPath": "GLO\/Param\/MatLUT",
-            "geoPath": "GLO\/Config\/GeometryAligned"
+            "grpmagPath": "GLO\/Config\/GRPMagField",
+            "mVtxPath": "GLO\/Calib\/MeanVertex"
         },
-        "mc_findableMode": "0",
         "v0BuilderOpts": {
             "generatePhotonCandidates": "false",
+            "moveTPCOnlyTracks": "true",
             "minCrossedRows": "50",
-            "dcanegtopv": "0.100000001",
-            "dcapostopv": "0.100000001",
-            "v0cospa": "0.94999999999999996",
-            "dcav0dau": "1",
-            "v0radius": "0.899999976",
-            "maxDaughterEta": "5",
+            "dcanegtopv": "0.05",
+            "dcapostopv": "0.05",
+            "v0cospa": "0.9876",
+            "dcav0dau": "0.5",
+            "v0radius": "0.55",
+            "maxDaughterEta": "0.8",
             "mc_populateV0MCCoresSymmetric": "false",
             "mc_populateV0MCCoresAsymmetric": "true",
             "mc_treatPiToMuDecays": "true",
             "mc_rapidityWindow": "1.0",
+            "mc_keepOnlyPhysicalPrimary": "false",
             "mc_addGeneratedK0Short": "true",
             "mc_addGeneratedLambda": "true",
             "mc_addGeneratedAntiLambda": "true",
@@ -203,11 +102,11 @@
         "cascadeBuilderOpts": {
             "useCascadeMomentumAtPrimVtx": "false",
             "minCrossedRows": "50",
-            "dcabachtopv": "0.0500000007",
-            "cascradius": "0.899999976",
-            "casccospa": "0.949999988",
-            "dcacascdau": "1",
-            "lambdaMassWindow": "0.00999999978",
+            "dcabachtopv": "0.04",
+            "cascradius": "1.01",
+            "casccospa": "0.99",
+            "dcacascdau": "0.25",
+            "lambdaMassWindow": "0.0116",
             "maxDaughterEta": "0.8",
             "kfTuneForOmega": "false",
             "kfConstructMethod": "2",
@@ -223,30 +122,35 @@
             "mc_addGeneratedOmegaPlus": "true",
             "mc_treatPiToMuDecays": "true",
             "mc_rapidityWindow": "1.0",
+            "mc_keepOnlyPhysicalPrimary": "false",
             "mc_findableDetachedCascade": "false"
         },
+        "trackPropagation": {
+            "minPropagationDistance": "5."
+        },
         "processRealData": "false",
-        "processRealDataRun2": "false",
+        "processMonteCarlo": "true"
+    },
+    "mult-cent-table": {
+        "processRun2": "false",
+        "processRun3": "true",
+        "processRun3WithGlobalCounters": "false",
+        "processMFT": "false",
         "processMonteCarlo": "true",
-        "processMonteCarloRun2": "false"
+        "processMonteCarlo2Mults": "false",
+        "processCentralityRun2": "false",
+        "processCentralityRun3": "true"
     },
-    "event-selection-task": {
-        "syst": "pp",
-        "isMC": "0",
-        "processRun2": "false",
-        "processRun3": "true"
-    },
-    "multiplicity-table": {
-        "doVertexZeq": "1",
-        "processRun2": "false",
-        "processRun3": "true", 
-        "fractionOfEvents" : "2"
+    "pid-tpc-service": {
+        "processTracks": "false",
+        "processTracksMC": "false",
+        "processTracksIU": "false",
+        "processTracksMCIU": "true"
     },
     "cascade-selector": {
         "processRecData": "false",
         "processRecMC": "true",
         "processGenMC": "true",
-        "doMCmatching": "true",
         "ccdbUrl": "http:\/\/alice-ccdb.cern.ch",
         "useTrigger": "false",
         "triggerList": "fDoubleXi, fDoubleOmega, fOmegaXi",
@@ -277,14 +181,15 @@
         "triggerList": "fDoubleXi, fDoubleOmega, fOmegaXi",
         "doTFBorderCut": "true",
         "doSel8": "true",
+        "INEL": "0",
         "processSameEvent": "true",
         "processMixedEvent": "true",
         "processMC": "true",
-        "etaGenCascades": "0.8",
         "zVertexCut": "10", 
-        "nMixedEvents": "10",
+        "nMixedEvents": "100",
         "doEfficiencyCorrection": "true",
         "ccdbUrl": "http:\/\/alice-ccdb.cern.ch",
-        "efficiencyCCDBPath": "Users\/r\/rspijker\/2D\/24j1"
+        "efficiencyCCDBPath": "Users\/r\/rspijker\/2D\/24f4d",
+        "etaGenCascades": "0.8"
     }
 }

@@ -10,17 +10,17 @@
 echo "" # newline
 
 # First things first, let's check if there is a valid token so we can access the ccdb:
-alien-token-info > /dev/null # dump output, we are only interested in the exit code
-if [ $? -ne 0 ]; then
-    while true; do
-        read -p "alien-token-info returned with non-zero exit code, do you wish to create a new one? (Y/n)" yn
-        case $yn in
-            [Yy]* ) alien-token-init; break;;
-            [Nn]* ) exit;;
-            * ) echo "Please answer yes or no.";;
-        esac
-    done
-fi
+# alien-token-info > /dev/null # dump output, we are only interested in the exit code
+# if [ $? -ne 0 ]; then
+#     while true; do
+#         read -p "alien-token-info returned with non-zero exit code, do you wish to create a new one? (Y/n)" yn
+#         case $yn in
+#             [Yy]* ) alien-token-init; break;;
+#             [Nn]* ) exit;;
+#             * ) echo "Please answer yes or no.";;
+#         esac
+#     done
+# fi
 
 FOLDER="local"
 HOST=`hostname`
@@ -44,10 +44,14 @@ CONFIG="-b --configuration json://ssbarconfigMCclosure.json" # -b means no debug
 echo "hey it seems we are about to execute the workflow, cool!"
 # execute the entire workflow
 o2-analysis-mccollision-converter $CONFIG | o2-analysis-tracks-extra-v002-converter $CONFIG | \
-o2-analysis-timestamp $CONFIG | o2-analysis-track-propagation $CONFIG | o2-analysis-event-selection $CONFIG | o2-analysis-multiplicity-table $CONFIG | \
-o2-analysis-pid-tpc-base $CONFIG | o2-analysis-pid-tpc $CONFIG | \
-o2-analysis-lf-strangenessbuilder $CONFIG | \
-o2-analysis-lf-cascadecorrelations $CONFIG --aod-file "alien:///alice/sim/2024/LHC24j1/526641/AOD/001/AO2D.root" > log_o2.txt
+o2-analysis-event-selection-service $CONFIG | o2-analysis-propagationservice $CONFIG | o2-analysis-multcenttable $CONFIG | o2-analysis-pid-tpc-service $CONFIG | \
+o2-analysis-lf-cascadecorrelations $CONFIG --aod-file "alien:///alice/sim/2024/LHC24f4d/0/558437/AOD/006/AO2D.root" > log_o2.txt
+
+# o2-analysis-mccollision-converter $CONFIG | o2-analysis-tracks-extra-v002-converter $CONFIG | \
+# o2-analysis-timestamp $CONFIG | o2-analysis-track-propagation $CONFIG | o2-analysis-event-selection $CONFIG | o2-analysis-multiplicity-table $CONFIG | \
+# o2-analysis-pid-tpc-base $CONFIG | o2-analysis-pid-tpc $CONFIG | \
+# o2-analysis-lf-strangenessbuilder $CONFIG | \
+# o2-analysis-lf-cascadecorrelations $CONFIG --aod-file "alien:///alice/sim/2024/LHC24f4d/0/558604/AOD/003/AO2D.root" > log_o2.txt
 
 # --resources-monitoring 10
 # in case of skimmed datasets: o2-analysis-lf-strangeness-filter
@@ -63,6 +67,7 @@ o2-analysis-lf-cascadecorrelations $CONFIG --aod-file "alien:///alice/sim/2024/L
 ### 22o pass7?: alien:///alice/data/2022/LHC22o/526641/apass7/0650/o2_ctf_run00526641_orbit0215950848_tf0000071251_epn246/001/AO2D.root
 ### 22o pass7 skimmed: alien:///alice/data/2022/LHC22o/528543/apass7_skimmed/0950/o2_ctf_run00528543_orbit0590742144_tf0000112425_b7s02p9411/001/AO2D.root
 ### 24am skimmed: alien:///alice/data/2024/LHC24am/555976/apass1_skimmed/0610/o2_ctf_run00555976_orbit0465019808_tf0000243738_b9p10p3582/001/AO2D.root
+### 24f4d: /alice/sim/2024/LHC24f4d/0/558437/AOD/006/AO2D.root
 ### MC file? /alice/sim/2023/LHC23k2c/1/529662/001/AO2D.root
 ### MC genpurp LHC24b1b (22o_apass6 anchor?): /alice/sim/2024/LHC24b1b/0/528531/AOD/001/AO2D.root
 

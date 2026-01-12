@@ -8,6 +8,7 @@
 // // json parsing
 // #include <nlohmann/json.hpp>
 // ROOT
+#include "TROOT.h"
 #include "TFile.h"
 #include "TH1.h"
 #include "TH2.h"
@@ -45,15 +46,15 @@ using axranges = std::map<int, std::vector<double>>;
 // // pT bins corresponding to efficiency 
 // const std::vector<double> pTbins = {0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.5, 4.0, 4.5, 5.0, 6.0, 8.0, 10.0};
 // const std::vector<TString> pTlabels = {"0.4", "0.6", "0.8", "1.0", "1.2", "1.4", "1.8", "2.0", "2.2", "2.4", "2.6", "2.8", "3.0", "3.5", "4.0", "4.5", "5.0", "6.0", "8.0", "10.0"};
-// assert(pTbins.size() == pTlabels.size() && "pTbins and pTlabels have different sizes, something is wrong!");
-// const int maxPtBins = pTbins.size();
-// const double pTmin = pTbins[0];
-// const double pTmax = pTbins[maxPtBins - 1];
 
-// broader bins:
-const std::vector<double> pTbins = {0.6, 1.0, 2.0, 3.0, 5.0, 12.0};
-const std::vector<TString> pTlabels = {"0.6", "1.0", "2.0", "3.0", "5.0", "12.0"};
-assert(pTbins.size() == pTlabels.size() && "pTbins and pTlabels have different sizes, something is wrong!");
+// // broader bins:
+// const std::vector<double> pTbins = {0.6, 1.0, 2.0, 3.0, 5.0, 12.0};
+// const std::vector<TString> pTlabels = {"0.6", "1.0", "2.0", "3.0", "5.0", "12.0"};
+
+// one inclusive bin
+const std::vector<double> pTbins = {1.0, 8.0};
+const std::vector<TString> pTlabels = {"1.0", "8.0"};
+
 const int maxPtBins = pTbins.size();
 const double pTmin = pTbins[0];
 const double pTmax = pTbins[maxPtBins - 1];
@@ -67,10 +68,13 @@ TFile *inputFile;
 TFile *outputFile;
 TDirectory *inputDir;
 
-int MCClosure(TString trainnr, TString filename = "AnalysisResults.root", bool makePDF = false) {
+int MCClosure(TString trainnr,  bool makePDF = false, TString filename = "AnalysisResults.root") {
   TH1::SetDefaultSumw2(); // Make sure we propagate the errors
   gStyle->SetHistLineWidth(3);
   gROOT->ForceStyle();
+
+  assert(pTbins.size() == pTlabels.size() && "pTbins and pTlabels have different sizes, something is wrong!");
+
 
   if(trainnr == "test"){ // if not a trainnr but just a test, look for AnalysisResults.root in current dir
     inputFile = new TFile(filename, "READ");
@@ -95,12 +99,12 @@ int MCClosure(TString trainnr, TString filename = "AnalysisResults.root", bool m
   inputFile->GetObject("cascade-selector/gen/hXiPlus", hXiPlusGen);
   TH1D *hXiMinGen1D = hXiMinGen->ProjectionX();
   TH1D *hXiPlusGen1D = hXiPlusGen->ProjectionX();
-  double nXiMin = hXiMinGen1D->Integral(hXiMinGen1D->FindBin(1.0), hXiMinGen1D->FindBin(10.));
-  double nXiPlus = hXiPlusGen1D->Integral(hXiPlusGen1D->FindBin(1.0), hXiPlusGen1D->FindBin(10.));
+  double nXiMin = hXiMinGen1D->Integral(hXiMinGen1D->FindBin(pTmin), hXiMinGen1D->FindBin(pTmax));
+  double nXiPlus = hXiPlusGen1D->Integral(hXiPlusGen1D->FindBin(pTmin), hXiPlusGen1D->FindBin(pTmax));
   cout << "nXiMin = " << nXiMin << ", nXiPlus = " << nXiPlus << endl;
   
   // 1D to start
-  axranges aMC{{mc::ptTrigg, {1., 10}}, {mc::ptAssoc, {1., 10}},
+  axranges aMC{{mc::ptTrigg, {pTmin, pTmax}}, {mc::ptAssoc, {pTmin, pTmax}},
                {mc::dY, {-1., 1.}}
               };
   TH1D* hPlusMinus = project(hMCPlusMinus, mc::dPhi, aMC);
@@ -167,7 +171,7 @@ int MCClosure(TString trainnr, TString filename = "AnalysisResults.root", bool m
   hSS->SetName("hSS");
   hSS->Add(hPlusPlus, hMinusMinus, .5, .5);
   TH1D* hSubtracted = new TH1D(*hPlusMinus);
-  hSubtracted->SetName("hSubtracted");
+  hSubtracted->SetName("hSub");
   hSubtracted->Add(hOS, hSS, 1, -1);
 
   outputFile->cd();

@@ -9,6 +9,7 @@
 #include <map>
 // ROOT
 #include "TFile.h"
+#include "TROOT.h"
 #include "TH1.h"
 #include "TH2.h"
 #include "TH3.h"
@@ -96,14 +97,14 @@ int MCEfficiency(TString trainnr, bool makePDF = false, TString option = "correl
   h2DXiMinGen = (TH2D*) h2DXiMinGen->RebinY(5);
   // projections for 1D eff sanity checks
   TH1D* hPtXiMinGen = (TH1D*) h2DXiMinGen->ProjectionX("hPtXiMinGen");
-  TH1D* hYXiMinGen = (TH1D*) h2DXiMinGen->ProjectionY("hYXiMinGen");
+  TH1D* hEtaXiMinGen = (TH1D*) h2DXiMinGen->ProjectionY("hEtaXiMinGen");
 
   // rec
   TH2D* h2DXiMinRec = RebinX2D(hXiMin2DRec, maxPtBins, pTbins, "h2DXiMinRec");
   h2DXiMinRec = (TH2D*) h2DXiMinRec->RebinY(5);
   // projections for 1D eff sanity checks
   TH1D* hPtXiMinRec = (TH1D*) h2DXiMinRec->ProjectionX("hPtXiMinRec");
-  TH1D* hYXiMinRec = (TH1D*) h2DXiMinRec->ProjectionY("hYXiMinRec");
+  TH1D* hEtaXiMinRec = (TH1D*) h2DXiMinRec->ProjectionY("hEtaXiMinRec");
 
   // eff
   TH2D *h2DXiMinEff = new TH2D(*h2DXiMinGen);
@@ -115,11 +116,11 @@ int MCEfficiency(TString trainnr, bool makePDF = false, TString option = "correl
   TH1D *hPtXiMinEff = new TH1D(*hPtXiMinGen);
   hPtXiMinEff->Divide(hPtXiMinRec, hPtXiMinGen);
   hPtXiMinEff->SetName("hPtXiMinEff");
-  hPtXiMinEff->SetTitle("Efficiency of #Xi^{-} vs. p_T");
-  TH1D *hYXiMinEff = new TH1D(*hYXiMinGen);
-  hYXiMinEff->Divide(hYXiMinRec, hYXiMinGen);
-  hYXiMinEff->SetName("hYXiMinEff");
-  hYXiMinEff->SetTitle("Efficiency of #Xi^{-} vs. y");
+  hPtXiMinEff->SetTitle("Efficiency of #Xi^{-} vs. #it{p}_{T}");
+  TH1D *hEtaXiMinEff = new TH1D(*hEtaXiMinGen);
+  hEtaXiMinEff->Divide(hEtaXiMinRec, hEtaXiMinGen);
+  hEtaXiMinEff->SetName("hEtaXiMinEff");
+  hEtaXiMinEff->SetTitle("Efficiency of #Xi^{-} vs. #eta");
 
   //// 2D Xi Plus
   // get the relevant histo's from file
@@ -137,6 +138,13 @@ int MCEfficiency(TString trainnr, bool makePDF = false, TString option = "correl
   h2DXiPlusEff->Divide(h2DXiPlusRec, h2DXiPlusGen);
   h2DXiPlusEff->SetName("hXiPlusEff");
   h2DXiPlusEff->SetTitle("2D efficiency of #Xi^{+}");
+  // projections for 1D eff sanity checks
+  TH1D* hPtXiPlusGen = (TH1D*) h2DXiPlusGen->ProjectionX("hPtXiPlusGen");
+  TH1D* hPtXiPlusRec = (TH1D*) h2DXiPlusRec->ProjectionX("hPtXiPlusRec");
+  TH1D *hPtXiPlusEff = new TH1D(*hPtXiPlusGen);
+  hPtXiPlusEff->Divide(hPtXiPlusRec, hPtXiPlusGen);
+  hPtXiPlusEff->SetName("hPtXiPlusEff");
+  hPtXiPlusEff->SetTitle("Efficiency of #Xi^{+} vs. #it{p}_{T}");
 
   //// 2D Omega Minus
   // get the relevant histo's from file
@@ -154,6 +162,13 @@ int MCEfficiency(TString trainnr, bool makePDF = false, TString option = "correl
   h2DOmegaMinEff->Divide(h2DOmegaMinRec, h2DOmegaMinGen);
   h2DOmegaMinEff->SetName("hOmegaMinEff");
   h2DOmegaMinEff->SetTitle("2D efficiency of #Omega^{-}");
+  // projections for 1D eff sanity checks
+  TH1D* hPtOmegaMinGen = (TH1D*) h2DOmegaMinGen->ProjectionX("hPtOmegaMinGen");
+  TH1D* hPtOmegaMinRec = (TH1D*) h2DOmegaMinRec->ProjectionX("hPtOmegaMinRec");
+  TH1D *hPtOmegaMinEff = new TH1D(*hPtOmegaMinGen);
+  hPtOmegaMinEff->Divide(hPtOmegaMinRec, hPtOmegaMinGen);
+  hPtOmegaMinEff->SetName("hPtOmegaMinEff");
+  hPtOmegaMinEff->SetTitle("Efficiency of #Omega^{-} vs. #it{p}_{T}");
 
   //// 2D Omega Plus
   // get the relevant histo's from file
@@ -171,6 +186,13 @@ int MCEfficiency(TString trainnr, bool makePDF = false, TString option = "correl
   h2DOmegaPlusEff->Divide(h2DOmegaPlusRec, h2DOmegaPlusGen);
   h2DOmegaPlusEff->SetName("hOmegaPlusEff");
   h2DOmegaPlusEff->SetTitle("2D efficiency of #Omega^{+}");
+  // projections for 1D eff sanity checks
+  TH1D* hPtOmegaPlusGen = (TH1D*) h2DOmegaPlusGen->ProjectionX("hPtOmegaPlusGen");
+  TH1D* hPtOmegaPlusRec = (TH1D*) h2DOmegaPlusRec->ProjectionX("hPtOmegaPlusRec");
+  TH1D *hPtOmegaPlusEff = new TH1D(*hPtOmegaPlusGen);
+  hPtOmegaPlusEff->Divide(hPtOmegaPlusRec, hPtOmegaPlusGen);
+  hPtOmegaPlusEff->SetName("hPtOmegaPlusEff");
+  hPtOmegaPlusEff->SetTitle("Efficiency of #Omega^{+} vs. #it{p}_{T}");
 
   // write canvasses to outfile and make pdf's
   TDirectory* figures = outfile->mkdir("figures");
@@ -180,11 +202,21 @@ int MCEfficiency(TString trainnr, bool makePDF = false, TString option = "correl
   for (auto h : {h2DXiMinEff, h2DXiPlusEff, h2DOmegaMinEff, h2DOmegaPlusEff}){
     h->SetStats(kFALSE);
     h->SetXTitle("#it{p}_{T}");
-    h->SetYTitle("y");
+    h->SetYTitle("#eta");
     h->Draw("colz");
     TString name = h->GetName();
     c->Write(name);
     if(makePDF) c->Print("figures/eff/2D/" + name + ".pdf");
+    c->Clear();
+  }
+  for (auto h : {hPtXiMinEff, hPtXiPlusEff, hPtOmegaMinEff, hPtOmegaPlusEff}){
+    h->SetStats(kFALSE);
+    h->SetXTitle("#it{p}_{T}");
+    h->SetYTitle("Efficiency");
+    h->Draw("e1");
+    TString name = h->GetName();
+    c->Write(name);
+    if(makePDF) c->Print("figures/eff/1D/" + name + ".pdf");
     c->Clear();
   }
 
