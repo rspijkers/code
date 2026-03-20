@@ -199,10 +199,10 @@ int MCEfficiency(TString trainnr, bool makePDF = false, TString option = "correl
   figures->cd();
   TCanvas *c = new TCanvas("c");
   c->cd();
+  gPad->SetRightMargin(0.15);
   for (auto h : {h2DXiMinEff, h2DXiPlusEff, h2DOmegaMinEff, h2DOmegaPlusEff}){
     h->SetStats(kFALSE);
-    h->SetXTitle("#it{p}_{T}");
-    h->SetYTitle("#eta");
+    h->SetTitle(";#it{p}_{T} (GeV/#it{c});#eta");
     h->Draw("colz");
     TString name = h->GetName();
     c->Write(name);
@@ -211,9 +211,8 @@ int MCEfficiency(TString trainnr, bool makePDF = false, TString option = "correl
   }
   for (auto h : {hPtXiMinEff, hPtXiPlusEff, hPtOmegaMinEff, hPtOmegaPlusEff}){
     h->SetStats(kFALSE);
-    h->SetXTitle("#it{p}_{T}");
-    h->SetYTitle("Efficiency");
-    h->Draw("e1");
+    h->SetTitle(";#it{p}_{T} (GeV/#it{c});#varepsilon");
+    h->Draw();
     TString name = h->GetName();
     c->Write(name);
     if(makePDF) c->Print("figures/eff/1D/" + name + ".pdf");

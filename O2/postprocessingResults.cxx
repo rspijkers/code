@@ -95,9 +95,10 @@ const double sidebandWindow[2] = {4.0, 10.0}; // in units of sigma
 
 // vectors/arrays with boundaries of signal/bkg regions of inv mass plots
 // TODO: Sign dependent!
-double sigXi[100][2], SBlowXi[100][2], SBhighXi[100][2]; // can't be variable length (i.e. maxPtBins - 1) so just put it to 100.
+double sigXiMinus[100][2], SBlowXiMinus[100][2], SBhighXiMinus[100][2]; // can't be variable length (i.e. maxPtBins - 1) so just put it to 100.
+double sigXiPlus[100][2], SBlowXiPlus[100][2], SBhighXiPlus[100][2]; // can't be variable length (i.e. maxPtBins - 1) so just put it to 100.
 double sigOm[100][2], bkgOm[100][2]; // can't be variable length (i.e. maxPtBins - 1) so just put it to 100.
-double purityXi[100];
+double purityXiMinus[100], purityXiPlus[100];
 // similar for ME histograms, but no sign dependence here
 TH2D* MEXiXiSig[100]; TH2D* MEXiXiSB[100];
 
@@ -107,11 +108,11 @@ TFile *outputFile;
 TDirectory *inputDir;
 
 // define function that projects all the QA histograms?
-void doQAprojections(TFile* infile, bool makePDF = false) { // todo fix infile
+void doQAprojections(bool makePDF = false) { 
   std::vector<TString> plotnames = {"hV0Radius", "hCascRadius", "hV0CosPA", "hCascCosPA", "hDCAPosToPV", "hDCANegToPV", "hDCABachToPV", "hDCAV0ToPV", "hDCAV0Dau", "hDCACascDau", "hLambdaMass", 
     "hITSnClustersPos", "hITSnClustersNeg", "hITSnClustersBach", "hTPCnCrossedRowsPos", "hTPCnCrossedRowsNeg", "hTPCnCrossedRowsBach"};
   TDirectory *dir;
-  infile->GetObject("cascade-selector", dir);
+  inputFile->GetObject("cascade-selector", dir);
   TCanvas *c = new TCanvas();
   for(TString name : plotnames){
     // cout << "   doing " << name << endl; // DEBUG
@@ -124,28 +125,22 @@ void doQAprojections(TFile* infile, bool makePDF = false) { // todo fix infile
   }
 }
 
-// Function for bkg fitting
-double pol2bkg(double *x, double *par){
-  if (x[0] > 1.655 && x[0] < 1.689) {
-    TF1::RejectPoint();
-    return 0;
-  }
-  return par[0] + par[1]*x[0] + par[2]*x[0]*x[0];
-}
-
-// Function for bkg fitting
-double pol2bkgXi(double *x, double *par){
-  if (x[0] > 1.305 && x[0] < 1.335) {
-    TF1::RejectPoint();
-    return 0;
-  }
-  return par[0] + par[1]*x[0] + par[2]*x[0]*x[0];
-}
-
 void doXiInvMassFits(TString charge, bool makePDF = false){
   assert(charge == "Minus" || charge == "Plus" && "Error in Xi inv. mass fits: charge has to be either 'Minus' or 'Plus'");
   TString sign;
   charge == "Minus" ? sign = "-" : sign = "+";
+  double (*sigXi)[2], (*SBlowXi)[2], (*SBhighXi)[2], (*purityXi);
+  if (charge == "Minus") {
+    sigXi = sigXiMinus;
+    SBlowXi = SBlowXiMinus;
+    SBhighXi = SBhighXiMinus;
+    purityXi = purityXiMinus;
+  } else {
+    sigXi = sigXiPlus;
+    SBlowXi = SBlowXiPlus;
+    SBhighXi = SBhighXiPlus;
+    purityXi = purityXiPlus;
+  }
 
   TDirectory* XiInvMass = outputFile->mkdir("Xi"+charge+"InvMass");
   XiInvMass->cd();
@@ -217,7 +212,7 @@ void doXiInvMassFits(TString charge, bool makePDF = false){
       fPol2Xi->SetLineColor(kGreen+2);
       fPol2Xi->Draw("same");
 
-      TLegend *leg = new TLegend(0.55, 0.65, 0.85, 0.85);
+      TLegend *leg = new TLegend(0.55, 0.65, 0.88, 0.85);
       leg->AddEntry(h, "#Xi^{"+sign+"} invariant mass", "l");
       leg->AddEntry(fPol2Xi, "Background fit function", "l");
       leg->AddEntry(f1, "Total fit function", "l");
@@ -251,7 +246,7 @@ void doOmInvMassFits(TString charge, bool makePDF = false){
   f2->SetParLimits(8, 0, 0.02);
   // do inv mass fit in pT bins
 
-  TF1 *fBKG = new TF1("fBKG", pol2bkg, 1.64, 1.74, 3);
+  TF1 *fBKG = new TF1("fBKG", pol2bkgom, 1.64, 1.74, 3);
 
   TH3F *hOmegaMass = inputDir->Get<TH3F>("hMassOmega"+charge);
   hOmegaMass->SetDirectory(outputFile);
@@ -293,8 +288,7 @@ void doOmInvMassFits(TString charge, bool makePDF = false){
   outputFile->cd();
 }
 
-void doMixedEvents(bool makePDF = false){
-
+void doMixedEvents(bool makePDF = false){ // TODO: charge dependent inv mass selections: do 4 combinations independently, then simply add them before normalizing to peak.
   TCanvas *c = new TCanvas();
 
   THnSparse *hMEXiXi, *hMEXiOm, *hMEOmOm;
@@ -306,7 +300,7 @@ void doMixedEvents(bool makePDF = false){
   for(int pTbin = 0; pTbin < maxPtBins - 1; pTbin++){
     axranges aMEXiXiSig{{corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {pTmin, pTmax}}, 
                      {corr::dY, {-dYmax, dYmax}},
-                     {corr::invMassTrigg, {sigXi[pTbin][0], sigXi[pTbin][1]}}, {corr::invMassAssoc, {sigXi[pTbin][0], sigXi[pTbin][1]}} // fixme read invmass from fits (dedicated function?)
+                     {corr::invMassTrigg, {sigXiMinus[pTbin][0], sigXiMinus[pTbin][1]}}, {corr::invMassAssoc, {sigXiMinus[pTbin][0], sigXiMinus[pTbin][1]}} // fixme read invmass from fits (dedicated function?)
     };
 
     TH2D *hMEXiXi2D = project2D(hMEXiXi, corr::dY, corr::dPhi, aMEXiXiSig);
@@ -344,11 +338,11 @@ void doMixedEvents(bool makePDF = false){
     // Sideband ME
     axranges aMEXiXiSBlow{{corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {pTmin, pTmax}}, 
               {corr::dY, {-dYmax, dYmax}},
-              {corr::invMassTrigg, {SBlowXi[pTbin][0], SBlowXi[pTbin][1]}}, {corr::invMassAssoc, {sigXi[pTbin][0], sigXi[pTbin][1]}}
+              {corr::invMassTrigg, {SBlowXiMinus[pTbin][0], SBlowXiMinus[pTbin][1]}}, {corr::invMassAssoc, {sigXiMinus[pTbin][0], sigXiMinus[pTbin][1]}}
     };
     axranges aMEXiXiSBhigh{{corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {pTmin, pTmax}}, 
               {corr::dY, {-dYmax, dYmax}},
-              {corr::invMassTrigg, {SBhighXi[pTbin][0], SBhighXi[pTbin][1]}}, {corr::invMassAssoc, {sigXi[pTbin][0], sigXi[pTbin][1]}}
+              {corr::invMassTrigg, {SBhighXiMinus[pTbin][0], SBhighXiMinus[pTbin][1]}}, {corr::invMassAssoc, {sigXiMinus[pTbin][0], sigXiMinus[pTbin][1]}}
     };
     TH2D *hMEXiXi2DSBlow = project2D(hMEXiXi, corr::dY, corr::dPhi, aMEXiXiSBlow);
     hMEXiXi2DSBlow->SetName("hMEXiXi2DSBlow"+pTlabels[pTbin]+"_"+pTlabels[pTbin+1]);
@@ -466,9 +460,8 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
   cout << "-- QA PROJECTIONS --" << endl;
   TH1F *hPhi = inputDir->Get<TH1F>("hPhi");
   hPhi->SetDirectory(outputFile);
-  // hPhi->Draw();
 
-  doQAprojections(inputFile);
+  doQAprojections(makePDF);
 
   // test inv mass fitting
   cout << "-- INV MASS FITS --" << endl;
@@ -482,53 +475,11 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
   cout << "-- MIXED EVENTS --" << endl;
   doMixedEvents(makePDF);
 
-  // now that we have the inv mass regions, let's project and integrate the eff corrected inv mass plots to determine the number of triggers
-  cout << "-- NORMALIZATION --" << endl;
   TDirectory* XiEffdir = outputFile->mkdir("XiEffdir");
   TDirectory* OmEffdir = outputFile->mkdir("OmEffdir");
   THnSparse *hEffCorrXiMass, *hEffCorrOmegaMass;
   inputDir->GetObject("hMassXiEffCorrected", hEffCorrXiMass);
   inputDir->GetObject("hMassOmegaEffCorrected", hEffCorrOmegaMass);
-  // put the projections in a vector so we can access them later
-  // array of Ntriggers for Xi, Omega
-  double NTrigXi[maxPtBins - 1], NTrigOm[maxPtBins - 1];
-  for (int pTbin = 0; pTbin < maxPtBins - 1; pTbin++){
-    axranges aXi{{mass::pT, {pTbins[pTbin], pTbins[pTbin + 1]}},
-                 {mass::invMass, {sigXi[pTbin][0], sigXi[pTbin][1]}},
-    };
-    axranges aOm{{mass::pT, {pTbins[pTbin], pTbins[pTbin + 1]}},
-                 {mass::invMass, {sigOm[pTbin][0], sigOm[pTbin][1]}},
-    };
-    TH1D *hXi = project(hEffCorrXiMass, mass::invMass, aXi);
-    hXi->SetName("hEffXiMass_" + pTlabels[pTbin + 1]);
-    hXi->SetDirectory(XiEffdir);
-    TH1D *hXi1 = project(hEffCorrXiMass, mass::pT, aXi);
-    hXi1->SetName("hEffXiMasspT_" + pTlabels[pTbin + 1]);
-    hXi1->SetDirectory(XiEffdir);
-    TH1D *hXi2 = project(hEffCorrXiMass, mass::y, aXi);
-    hXi2->SetName("hEffXiMassy_" + pTlabels[pTbin + 1]);
-    hXi2->SetDirectory(XiEffdir);
-    TH2D *hXi3 = project2D(hEffCorrXiMass, mass::pT, mass::y, aXi);
-    hXi3->SetName("hEffXiMasspTy_" + pTlabels[pTbin + 1]);
-    hXi3->SetDirectory(XiEffdir);
-    
-    double xiInt = hXi->Integral();
-    if(std::isinf(xiInt)) {
-      xiInt = 1.; // set to 1 in case of infinity, warn the user
-      cout << "WARNING: Ntrig Xi in pT bin " << pTlabels[pTbin] << " - " << pTlabels[pTbin + 1] << " is inf - Ntrig set to 1." << endl;
-    }
-    NTrigXi[pTbin] = xiInt;
-    // cout << "ntrig = " << ntrig << endl;
-    TH1D *hOm = project(hEffCorrOmegaMass, mass::invMass, aOm);
-    hOm->SetName("hEffOmMass_" + pTlabels[pTbin + 1]);
-    hOm->SetDirectory(OmEffdir);
-    double omInt = hOm->Integral();
-    if(std::isinf(omInt)) {
-      omInt = 1.; // set to 1 in case of infinity, warn the user
-      cout << "WARNING: Ntrig Om in pT bin " << pTlabels[pTbin] << " - " << pTlabels[pTbin + 1] << " is inf - Ntrig set to 1." << endl;
-    }
-    NTrigOm[pTbin] = omInt;
-  }
   
   // Load the THnSparses
   THnSparse *hXiXi, *hXiOm, *hOmOm;
@@ -539,113 +490,45 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
   // test projection of Xi-Xi OS onto 2D dphi-dy
   axranges aPtIntMass{{mass::pT, {1., 10.}}, 
                       // {mass::y, {-0.5, 0.5}},
-                      {mass::invMass, {sigXi[0][0], sigXi[0][1]}}
+                      {mass::invMass, {sigXiMinus[0][0], sigXiMinus[0][1]}}
   };
-  // make single Xi spectra (charge independent)
-  // get Nevents:
-  // double Nevents = (double) inputFile->Get<TH1I>("cascade-selector/hEventSel")->GetBinContent(6);
-  double Nevents = 12999723968.; // REMOVE ME AFTER FIXING MAX INT
-  cout << "Nevents: " << Nevents << endl;
-  TH1D* hXiSpectra = project(hEffCorrXiMass, mass::pT, {{mass::pT, {0., pTmax}}, {mass::y, {-0.5, 0.5}}, {mass::invMass, {1.31, 1.33}}});
-  hXiSpectra->SetName("hXiSpectra");
-  Double_t Xibinning[14] = {0.6, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.5, 2.9, 3.4, 4.0, 5.0, 6.5};
-  TH1D* hSpectraRebin = (TH1D*) hXiSpectra->Rebin(13, "hSpectraRebin", Xibinning);
-  hSpectraRebin->Scale(1./(Nevents), "width"); // divide by an extra factor of 2 because of Xi charges ---- 65536 = factor of 2^n used in run 3 AN
-  // hSpectraRebin->Scale(1209904670./2024331520.); // Nev(rec) = 1209904670 / Nev(gen) = 2024331520 (run 521456)
-  hSpectraRebin->Scale(1199241785./2019676955.); // Nev(rec) = 1199241785 / Nev(gen) = 2019676955 (run 550154 24f3c_fix_medium)
-  TH3F *hMassXiMinus = inputDir->Get<TH3F>("hMassXiMinus");
-  TH1D *hXiMinusMass1D = hMassXiMinus->ProjectionX();
-  hXiMinusMass1D->SetName("hXiMinusMass1D");
-  TH1D *hRawXiMass = hMassXiMinus->ProjectionY("hRawXiMass");
-  TH1D* hRawSpectraRebin = (TH1D*) hRawXiMass->Rebin(13, "hRawSpectraRebin", Xibinning);
-  hRawSpectraRebin->Scale(1./Nevents, "width"); // ---- 65536 = factor of 2^n used in run 3 AN
-
-  TH1D* hXiSpectraMult = project(hEffCorrXiMass, mass::multiplicity, {{mass::pT, {0.6, pTmax}}, {mass::y, {-0.5, 0.5}}, {mass::invMass, {1.31, 1.33}}, {mass::multiplicity, {0,99}}});
-  hXiSpectraMult->SetName("hXiSpectraMult");
-
-  TFile *run2file = new TFile("run2Xispectra.root", "READ");
-  outputFile->cd();
-  TH1D *run2Spectra = (TH1D*) run2file->Get<TH1F>("Table 3/Hist1D_y11");
-  run2Spectra->SetLineColor(kRed);
-  hSpectraRebin->GetYaxis()->SetRangeUser(1e-5, 0.045); // don't put minimum to zero, so we can use logscale later
-  TCanvas *cSpectra = new TCanvas("cSpectra");
-  hSpectraRebin->SetTitle("Xi spectra");
-  hSpectraRebin->GetYaxis()->SetTitle("\\frac{1}{N_{ev}}\\frac{d^{2}N}{dy dp_{T}} (GeV/c)^{-1}");
-  hSpectraRebin->SetStats(kFALSE);
-  hSpectraRebin->Draw();
-  run2Spectra->Draw("SAME");
-  TLegend *legend = new TLegend();
-  legend->AddEntry(hSpectraRebin, "this analysis");
-  legend->AddEntry(run2Spectra, "run 2");
-  legend->Draw();
-  cSpectra->Write();
-  TH1D* hSpectraRatio = (TH1D*) hSpectraRebin->Clone();
-  hSpectraRatio->SetName("hSpectraRatio");
-  hSpectraRatio->GetXaxis()->SetLimits(0.6, 6.5);
-  Double_t errors[13] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-  run2Spectra->SetError(errors);
-  hSpectraRatio->Divide(run2Spectra);
-
-  TCanvas *cRatio = new TCanvas("cRatio");
-  TRatioPlot *rp = new TRatioPlot(hSpectraRebin, run2Spectra, "divsym");
-  rp->SetH1DrawOpt("E");
-  rp->Draw();
-  rp->GetUpperPad()->cd();
-  rp->GetUpperPad()->SetLogy();
-  rp->GetXaxis()->SetLimits(0.6, 6.5);
-  rp->GetXaxis()->SetTitle("p_T");
-  legend->Draw();
-  if(makePDF) cRatio->Print("figures/spectraRatio.pdf");
-  cRatio->Write();
 
   // CORRELATIONS
-
-  // TEMP remove this
-  // make quick pT spectrum of eff corrected xi, to make ratio
-  TH1D *hXiEffpT = project(hEffCorrXiMass, mass::pT, aPtIntMass);
-  hXiEffpT->SetName("TEMPXiEffpT");
-
-  axranges aPtIntegrated{{corr::signTrigg, {-1, -1}}, {corr::signAssoc, {1, 1}},
-                        {corr::ptTrigg, {1., 10}}, {corr::ptAssoc, {1., 10}},
-                        {corr::dY, {-dYmax, dYmax}},
-                        {corr::invMassTrigg, {sigXi[0][0], sigXi[0][1]}}, {corr::invMassAssoc, {sigXi[0][0], sigXi[0][1]}}
-  };
-
   axranges aXiMinXiPlus{{corr::signTrigg, {-1, -1}}, {corr::signAssoc, {1, 1}},
                         {corr::ptTrigg, {1., 10}}, {corr::ptAssoc, {1., 10}},
                         {corr::dY, {-dYmax, dYmax}},
-                        {corr::invMassTrigg, {sigXi[0][0], sigXi[0][1]}}, {corr::invMassAssoc, {sigXi[0][0], sigXi[0][1]}}
+                        {corr::invMassTrigg, {sigXiMinus[0][0], sigXiMinus[0][1]}}, {corr::invMassAssoc, {sigXiPlus[0][0], sigXiPlus[0][1]}}
   };
   axranges aXiMinXiMin{{corr::signTrigg, {-1, -1}}, {corr::signAssoc, {-1, -1}},
                       {corr::ptTrigg, {1., 10}}, {corr::ptAssoc, {1., 10}},
                       {corr::dY, {-dYmax, dYmax}},
-                      {corr::invMassTrigg, {sigXi[0][0], sigXi[0][1]}}, {corr::invMassAssoc, {sigXi[0][0], sigXi[0][1]}}
+                      {corr::invMassTrigg, {sigXiMinus[0][0], sigXiMinus[0][1]}}, {corr::invMassAssoc, {sigXiMinus[0][0], sigXiMinus[0][1]}}
   };
   axranges aXiPlusXiMin{{corr::signTrigg, {1, 1}}, {corr::signAssoc, {-1, -1}},
                         {corr::ptTrigg, {1., 10}}, {corr::ptAssoc, {1., 10}},
                         {corr::dY, {-dYmax, dYmax}},
-                        {corr::invMassTrigg, {sigXi[0][0], sigXi[0][1]}}, {corr::invMassAssoc, {sigXi[0][0], sigXi[0][1]}}
+                        {corr::invMassTrigg, {sigXiPlus[0][0], sigXiPlus[0][1]}}, {corr::invMassAssoc, {sigXiMinus[0][0], sigXiMinus[0][1]}}
   };
   axranges aXiPlusXiPlus{{corr::signTrigg, {1, 1}}, {corr::signAssoc, {1, 1}},
                         {corr::ptTrigg, {1., 10}}, {corr::ptAssoc, {1., 10}},
                         {corr::dY, {-dYmax, dYmax}},
-                        {corr::invMassTrigg, {sigXi[0][0], sigXi[0][1]}}, {corr::invMassAssoc, {sigXi[0][0], sigXi[0][1]}}
+                        {corr::invMassTrigg, {sigXiPlus[0][0], sigXiPlus[0][1]}}, {corr::invMassAssoc, {sigXiPlus[0][0], sigXiPlus[0][1]}}
   };
 
   // inv mass of Xi trig & assoc
-  TH1D *hXiInvMassTrig = project(hXiXi, corr::invMassTrigg, aPtIntegrated);
+  TH1D *hXiInvMassTrig = project(hXiXi, corr::invMassTrigg, aXiMinXiPlus);
   hXiInvMassTrig->SetName("hXiInvMassTrig");
-  TH1D *hXiInvMassAssoc = project(hXiXi, corr::invMassAssoc, aPtIntegrated);
+  TH1D *hXiInvMassAssoc = project(hXiXi, corr::invMassAssoc, aXiMinXiPlus);
   hXiInvMassAssoc->SetName("hXiInvMassAssoc");
 
   // TRIGGER NORMALIZATION
   axranges aMassXiMin{{mass::pT, {1., 10.}}, 
                       {mass::sign, {-1, -1}},
-                      {mass::invMass, {sigXi[0][0], sigXi[0][1]}}
+                      {mass::invMass, {sigXiMinus[0][0], sigXiMinus[0][1]}}
   };
   axranges aMassXiPlus{{mass::pT, {1., 10.}}, 
                       {mass::sign, {1, 1}},
-                      {mass::invMass, {sigXi[0][0], sigXi[0][1]}}
+                      {mass::invMass, {sigXiPlus[0][0], sigXiPlus[0][1]}}
   };
   
   TH1D *hMassTest = hEffCorrXiMass->Projection(0);
@@ -676,7 +559,7 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
   inputDir->GetObject("MixedEvents/hMEXiXi", hMEXiXi);
   axranges aMEXiXi{{corr::ptTrigg, {1.0, 10.}}, {corr::ptAssoc, {1.0, 10.}}, 
                   {corr::dY, {-dYmax, dYmax}},
-                  {corr::invMassTrigg, {sigXi[0][0], sigXi[0][1]}}, {corr::invMassAssoc, {sigXi[0][0], sigXi[0][1]}} // fixme read invmass from fits (dedicated function?)
+                  {corr::invMassTrigg, {sigXiMinus[0][0], sigXiMinus[0][1]}}, {corr::invMassAssoc, {sigXiPlus[0][0], sigXiPlus[0][1]}} // fixme read invmass from fits (dedicated function?)
   };
   TH2D *hMEXiXi2D = project2D(hMEXiXi, corr::dY, corr::dPhi, aMEXiXi);
   hMEXiXi2D->SetName("hMEXiXi2D");
@@ -714,7 +597,6 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
   c->Clear();
 
   //2D
-
   TH2D* hXiMinXiPlus = project2D(hXiXi, corr::dY, corr::dPhi, aXiMinXiPlus);
   hXiMinXiPlus->SetName("hXiMinXiPlus");
   hXiMinXiPlus->RebinX(9);
@@ -791,7 +673,7 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
   hRun2OSRatio->GetUpperRefYaxis()->SetRangeUser(0., 0.02);
   hRun2OSRatio->GetLowerRefYaxis()->SetRangeUser(0., 1.);
   hRun2OSRatio->GetLowYaxis()->SetNdivisions(505);
-  TLegend *legendOS = new TLegend(0.55, 0.75, 0.75, 0.85);
+  TLegend *legendOS = new TLegend(0.55, 0.75, 0.88, 0.85);
   hRun2OSRatio->GetUpperPad()->cd(); // draw legend in upper pad
   legendOS->AddEntry(hXiXiOS, "this analysis");
   legendOS->AddEntry(hRun2OS, "run 2");
@@ -840,7 +722,7 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
   hRun2Ratio->GetUpperRefYaxis()->SetRangeUser(0., 0.015);
   hRun2Ratio->GetLowerRefYaxis()->SetRangeUser(0., 1.);
   hRun2Ratio->GetLowYaxis()->SetNdivisions(505);
-  TLegend *legend2 = new TLegend(0.55, 0.75, 0.75, 0.85);
+  TLegend *legend2 = new TLegend(0.55, 0.75, 0.88, 0.85);
   hRun2Ratio->GetUpperPad()->cd(); // draw legend in upper pad
   legend2->AddEntry(hXiXisubtracted, "this analysis");
   legend2->AddEntry(hRun2, "run 2");
@@ -867,34 +749,61 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
     XiXidir->cd();
     int count = 0;
     for(auto signs : signsarray){
+      // define properties based on sign. 
       TString triggerSign, assocSign;
-      signs[0] < 0 ? triggerSign = "-" : triggerSign = "+";
-      signs[1] < 0 ? assocSign = "-" : assocSign = "+";
+      double (*sigXiTrig)[2], (*SBlowXiTrig)[2], (*SBhighXiTrig)[2];
+      double (*sigXiAssoc)[2], (*SBlowXiAssoc)[2], (*SBhighXiAssoc)[2];
+      double (*purityXi);
+      if (signs[0] < 0) {
+        triggerSign = "-";
+        sigXiTrig = sigXiMinus;
+        SBlowXiTrig = SBlowXiMinus;
+        SBhighXiTrig = SBhighXiMinus;
+        purityXi = purityXiMinus;
+      } else {
+        triggerSign = "+";
+        sigXiTrig = sigXiPlus;
+        SBlowXiTrig = SBlowXiPlus;
+        SBhighXiTrig = SBhighXiPlus;
+        purityXi = purityXiPlus;
+      }
+      if (signs[1] < 0) {
+        assocSign = "-";
+        sigXiAssoc = sigXiMinus;
+        SBlowXiAssoc = SBlowXiMinus;
+        SBhighXiAssoc = SBhighXiMinus;
+      } else {
+        assocSign = "+";
+        sigXiAssoc = sigXiPlus;
+        SBlowXiAssoc = SBlowXiPlus;
+        SBhighXiAssoc = SBhighXiPlus;
+      }
+
       axranges aXiSig{{corr::signTrigg, {signs[0], signs[0]}}, {corr::signAssoc, {signs[1], signs[1]}},
                       {corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {pTmin, pTmax}},
                       {corr::dY, {-dYmax, dYmax}},
-                      {corr::invMassTrigg, {sigXi[pTbin][0], sigXi[pTbin][1]}}, {corr::invMassAssoc, {sigXi[pTbin][0], sigXi[pTbin][1]}}
+                      {corr::invMassTrigg, {sigXiTrig[pTbin][0], sigXiTrig[pTbin][1]}}, {corr::invMassAssoc, {sigXiAssoc[pTbin][0], sigXiAssoc[pTbin][1]}}
       };
       axranges aXiOmSig{{corr::signTrigg, {signs[0], signs[0]}}, {corr::signAssoc, {signs[1], signs[1]}},
                       {corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {pTmin, pTmax}},
                       {corr::dY, {-dYmax, dYmax}},
-                      {corr::invMassTrigg, {sigXi[pTbin][0], sigXi[pTbin][1]}}, {corr::invMassAssoc, {sigOm[pTbin][0], sigOm[pTbin][1]}}
+                      {corr::invMassTrigg, {sigXiTrig[pTbin][0], sigXiTrig[pTbin][1]}}, {corr::invMassAssoc, {sigOm[pTbin][0], sigOm[pTbin][1]}}
       };
       axranges aXiSBlow{{corr::signTrigg, {signs[0], signs[0]}}, {corr::signAssoc, {signs[1], signs[1]}},
                       {corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {pTmin, pTmax}},
                       {corr::dY, {-dYmax, dYmax}},
-                      {corr::invMassTrigg, {SBlowXi[pTbin][0], SBlowXi[pTbin][1]}}, {corr::invMassAssoc, {sigXi[pTbin][0], sigXi[pTbin][1]}}
+                      {corr::invMassTrigg, {SBlowXiTrig[pTbin][0], SBlowXiTrig[pTbin][1]}}, {corr::invMassAssoc, {sigXiAssoc[pTbin][0], sigXiAssoc[pTbin][1]}}
       };
       axranges aXiSBhigh{{corr::signTrigg, {signs[0], signs[0]}}, {corr::signAssoc, {signs[1], signs[1]}},
                       {corr::ptTrigg, {pTbins[pTbin], pTbins[pTbin+1]}}, {corr::ptAssoc, {pTmin, pTmax}},
                       {corr::dY, {-dYmax, dYmax}},
-                      {corr::invMassTrigg, {SBhighXi[pTbin][0], SBhighXi[pTbin][1]}}, {corr::invMassAssoc, {sigXi[pTbin][0], sigXi[pTbin][1]}}
+                      {corr::invMassTrigg, {SBhighXiTrig[pTbin][0], SBhighXiTrig[pTbin][1]}}, {corr::invMassAssoc, {sigXiAssoc[pTbin][0], sigXiAssoc[pTbin][1]}}
       };
 
       // vvv trigger normalization vvv
       axranges aXiMass{{mass::pT, {pTbins[pTbin], pTbins[pTbin+1]}}, 
                       {mass::sign, {signs[0], signs[0]}},
-                      {mass::invMass, {sigXi[0][0], sigXi[0][1]}}
+                      {mass::invMass, {sigXiTrig[0][0], sigXiTrig[0][1]}}
       };
       TH1D *hMass = project(hEffCorrXiMass, mass::invMass, aXiMass);
       double nTriggers = hMass->Integral();
@@ -1005,7 +914,7 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
         latex.SetTextSize(0.035);
         latex.DrawLatex(x, y, h->GetTitle());
         latex.DrawLatex(x, y - spacing, "1.0 GeV/#it{c} < #it{p}_{T,assoc} < #it{p}_{T,trigger}");
-        latex.DrawLatex(x, y - 2*spacing, "pp, #sqrt{s} = 13 TeV");
+        latex.DrawLatex(x, y - 2*spacing, "pp, #sqrt{s} = 13.6 TeV");
 
         h->SetTitle("");
         c->Print("figures/corr/"+hname+".pdf");
@@ -1027,10 +936,9 @@ int postprocessingResults(TString trainnr, TString filename = "AnalysisResults.r
         latex.SetTextSize(0.035);
         latex.DrawLatex(x, y, h->GetTitle());
         latex.DrawLatex(x, y - spacing, "1.0 GeV/#it{c} < #it{p}_{T,assoc} < #it{p}_{T,trigger}");
-        latex.DrawLatex(x, y - 2*spacing, "pp, #sqrt{s} = 13 TeV");
+        latex.DrawLatex(x, y - 2*spacing, "pp, #sqrt{s} = 13.6 TeV");
 
         h->SetTitle("");
-        // c->GetPad(0)->SetLeftMargin(0.15);
         c->Print("figures/corr/"+hname+".pdf");
         c->Clear();
       }

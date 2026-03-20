@@ -32,7 +32,7 @@ std::vector<TString> plotnames = {"hV0Radius", "hCascRadius", "hV0CosPA", "hCasc
    "hDCANegToPV", "hDCABachToPV", "hDCAV0ToPV", "hDCAV0Dau", "hDCACascDau", "hLambdaMass", "hITSnClustersPos", 
    "hITSnClustersNeg", "hITSnClustersBach", "hTPCnCrossedRowsPos", "hTPCnCrossedRowsNeg", "hTPCnCrossedRowsBach"};
 
-int topocheck(){
+int topocheck(bool makePDFs = false){
 
   TFile *fDefault = new TFile("results/576504/AnalysisResults.root", "READ");
   TFile *fLoose = new TFile("results/576505/AnalysisResults.root", "READ");
@@ -170,9 +170,9 @@ int topocheck(){
       continue;
     }
     // cout << hBefore3DData->GetZaxis()->GetXmin() << endl;
-    // hBefore3DData->GetZaxis()->SetRangeUser(4,6);
+    hBefore3DData->GetZaxis()->SetRangeUser(1,8);
     hBefore3DData->GetYaxis()->SetRangeUser(1.31, 1.33);
-    // hBefore3DMC->GetZaxis()->SetRangeUser(4,6);
+    hBefore3DMC->GetZaxis()->SetRangeUser(1,8);
     hBefore3DMC->GetYaxis()->SetRangeUser(1.31, 1.33);
     TH1F* hBeforeData = (TH1F*)hBefore3DData->Project3D("x");
     TH1F* hBeforeMC = (TH1F*)hBefore3DMC->Project3D("x");
@@ -180,21 +180,25 @@ int topocheck(){
     hBeforeMC->Scale(1./hBeforeMC->Integral());
 
     hBeforeData->SetStats(kFALSE);
-    hBeforeData->SetLineColor(kBlue);
+    hBeforeData->SetLineColor(kRed);
+    hBeforeData->SetLineWidth(2);
     hBeforeMC->SetLineColor(kBlack);
+    hBeforeMC->SetLineWidth(2);
     leg->AddEntry(hBeforeData, "data", "l");
     leg->AddEntry(hBeforeMC, "MC", "l");
-    // hBeforeData->SetTitle(name);
     leg->AddEntry((TObject*)nullptr, "min pT > 1 GeV/c", "");
     hBeforeData->Draw("HIST");
     hBeforeMC->Draw("SAME HIST");
     leg->Draw();
     c1->SetName(hBeforeData->GetName());
     c1->Write();
+    if (makePDFs) {
+      hBeforeData->SetTitle("");
+      c1->Print("figures/systematics/topocheck/Before_" + name + ".pdf");
+    }
     c1->Clear();
     leg->Clear();
   }
-  // fOutput->Write();
   fOutput->Close();
   for(TFile* f : {fLoose, fDefault, fTight}){
     f->Close();
