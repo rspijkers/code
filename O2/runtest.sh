@@ -52,7 +52,7 @@ echo "hey it seems we are about to execute the workflow, cool!"
 # execute the entire workflow
 o2-analysis-tracks-extra-v002-converter $CONFIG | \
 o2-analysis-event-selection-service $CONFIG | o2-analysis-propagationservice $CONFIG | o2-analysis-multcenttable $CONFIG | o2-analysis-pid-tpc-service $CONFIG | \
-o2-analysis-lf-cascadecorrelations $CONFIG --aod-file "alien:///alice/data/2024/LHC24am/555976/apass1_sampled/0550/o2_ctf_run00555976_orbit0457227168_tf0000000218_epn297/001/AO2D.root" > log_o2.txt
+o2-analysis-lf-cascadecorrelations $CONFIG --aod-memory-rate-limit 209715200 --shm-segment-size 7500000000 --aod-file "alien:///alice/data/2024/LHC24am/555976/apass1_sampled/0550/o2_ctf_run00555976_orbit0457227168_tf0000000218_epn297/001/AO2D.root" > log_o2.txt
 
 # --resources-monitoring 10
 # in case of skimmed datasets: o2-analysis-lf-strangeness-filter

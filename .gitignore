@@ -18,6 +18,7 @@ CustomROOTClass/test
 /O2/test.json
 /O2/dpl-config.json
 /O2/stbc.code-workspace
+/O2/figures/
 
 # QC dir ignores
 /QC/5*_investigation/

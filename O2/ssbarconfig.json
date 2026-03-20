@@ -182,10 +182,10 @@
         "doTFBorderCut": "true",
         "doSel8": "true",
         "processSameEvent": "true",
-        "processMixedEvent": "true",
+        "processMixedEvent": "false",
         "processMC": "false",
         "zVertexCut": "10", 
-        "nMixedEvents": "100",
+        "nMixedEvents": "10",
         "doEfficiencyCorrection": "true",
         "ccdbUrl": "http:\/\/alice-ccdb.cern.ch",
         "efficiencyCCDBPath": "Users\/r\/rspijker\/2D\/24j1"

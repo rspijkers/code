@@ -12,11 +12,11 @@ DIGITS=${TRAINRUN:0:2}
 TESTID=00$DIGITS/00$TRAINRUN
 
 # make sure we are in the right directory...
-cd /user/rspijker/project/code/O2/results
-if [ $? -ne 0 ]; then
-    echo "Changing directory failed, exiting program!";
-    exit;
-fi
+# cd /user/rspijker/project/code/O2/results
+# if [ $? -ne 0 ]; then
+#     echo "Changing directory failed, exiting program!";
+#     exit;
+# fi
 
 # make and enter the relevant dir
 [ ! -d "$TRAINRUN" ] && mkdir $TRAINRUN
@@ -25,7 +25,7 @@ cd $TRAINRUN
 ### 1 Download the full merged output AnalysisResults.root
 # there is an extra nested directory
 # NEST=`alien_ls /alice/cern.ch/user/a/alihyperloop/outputs/00$DIGITS/$TRAINRUN`
-NEST=`alien_ls /alice/cern.ch/user/a/alihyperloop/outputs/00$DIGITS/$TRAINRUN | sort -r | head -n 1`
+NEST=`alien_ls /alice/cern.ch/user/a/alihyperloop/outputs/00$DIGITS/$TRAINRUN | head -n 1`
 
 alien_cp alien:/alice/cern.ch/user/a/alihyperloop/outputs/00$DIGITS/$TRAINRUN/${NEST}AnalysisResults.root file:./AnalysisResults.root
 
