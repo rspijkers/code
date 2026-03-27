@@ -1,0 +1,193 @@
+// This is a PYTHIA script that generates pp events and saves them to a root file. 
+// It is taylored to save cascade particles so we can analyze correlations between them after generating.
+// This script should be shipped with a makefile, custom event and track classes, and PYTHIA config files.
+//
+// Usage:
+// After making the executable, it can be run by `./cascade_correlations "outputfile.root" runNumber`
+// `runNumber` is an optional parameter that allows for easier parallel generating, This way you can have
+// uniquely identified events across multiple instances of this script. Handy if you want to run on a grid
+// or something similar. It is assumed that runNumber starts from 1, entering runNumber=0 will lead to 
+// negative eventId's.
+//
+// Author: Rik Spijkers (rik.spijkers@nikhef.nl)
+
+// std
+#include <iostream>
+#include <cmath> // needed for modulo in deltaPhi calc & abs of doubles
+#include <vector> // needed for a variable array
+#include <cstring> // string/char handling
+#include <chrono> // for measuring performance of script
+// ROOT/pythia
+#include "Pythia8/Pythia.h"
+#include "TFile.h"
+#include "TH3.h"
+#include "TTree.h"
+// custom
+#include "helperfunctions.h"
+#include "SmallEvent.h"
+
+#define PI 3.14159265
+
+using namespace Pythia8;
+using std::cout; using std::endl;
+
+bool isChargedCascade(int pdg)
+{
+  // Checks if given pdg code is that of a cascade particle, returns True/False
+  int abspdg = std::abs(pdg);
+  if (abspdg == 3312 || abspdg == 3334)
+    return true; // 3312 = Xi-, 3334 = Omega-
+  return false;
+}
+
+int main(int argc, char** argv)
+{	
+	// we expect the following arguments:
+	// outputfilepath, cmnd filepath, runNr (optional)
+	Int_t runNr = 0;
+	// main() counts as one argument
+	if (argc < 3) {
+		cerr << "Error: Too few command-line arguments! You are expected to give at least an output file path and a PYTHIA config file." << endl;
+		return 1;
+	} else if (argc == 4) {
+		try{
+			runNr = std::stoi(argv[3]);
+		} catch(std::invalid_argument) {
+			cerr << "Error: Could not convert the run number to an integer! " << endl;
+			return 1;
+		}
+	} else if (argc > 4) {
+		cerr << "Error: Too many command-line arguments! You are expected to give at most a file path for the output and a run number. " << endl;
+		return 1;
+	}
+	// TODO: check if argument is a valid path?		
+
+	const char* outFilePath = argv[1];
+	const char* pythiaOptions = argv[2];
+
+	// start keeping track of time
+  auto start = std::chrono::high_resolution_clock::now();
+
+	// Analysis settings
+	const Double_t 	pTmin = 0.15; // maybe don't use this?
+	const Double_t 	maxEta = 4.; // probably don't use this cut?
+
+	Pythia pythia;
+
+	// PYTHIA SETTINGS
+	pythia.readFile(pythiaOptions);
+	// pythia.readFile("pythia_settings/ssbar_monash.cmnd");
+	Int_t nEvents = pythia.mode("Main:numberOfEvents");
+	const Int_t eventIdOffset = nEvents*(runNr-1);
+
+	Int_t processid = getpid();
+	string seedstr = "Random:seed = " + std::to_string((time(0) + processid)%900000000);
+	pythia.readString("Random:setSeed = on");
+	pythia.readString(seedstr); // 0 means it uses the time to generate a seed
+
+	pythia.init();
+
+	// OUTPUT INIT
+	TFile* outFile = new TFile(outFilePath, "CREATE"); // doesn't open file if it already exists 
+	if(!outFile->IsOpen()) { // if output file isn't opened, abort program
+		cerr << "Error: File " << outFilePath << " is not opened, perhaps because it already exists. Aborting script.";
+		return 1;
+	}
+
+  TH1D* hRejectedEvents = new TH1D("hRejectedEvents", "Number of events rejected", 0, 2, 2);
+  hRejectedEvents->GetXaxis()->SetBinLabel(1, "INEL0");
+  hRejectedEvents->GetXaxis()->SetBinLabel(2, "no cascades");
+
+	Int_t Ntracks4p0;
+	Int_t Ntracks2p4;
+	Int_t Ntracks0p8;
+	Int_t pdg;
+	Double_t pT;
+	Double_t eta;
+	Double_t y;
+	Double_t phi;
+	Double_t pTssbar;
+	
+	SmallEvent *event = new SmallEvent();
+	SmallTrack track;
+	TTree *tree = new TTree("tree", "tree with small events and small tracks");
+	tree->Branch("event", &event); 
+
+	cout << "Generating " << nEvents << " events..." << endl;
+	for(int iEvent = 0; iEvent < nEvents; iEvent++) { // event loop
+		if(!pythia.next()) continue;
+
+		int nPart = pythia.event.size();
+
+    bool INEL0 = false;
+
+		int candidatesPerEvent = 0;
+		pTssbar = -1.;
+		
+		for(int iPart = 0; iPart < nPart; iPart++) { // particle loop
+      const Particle &part = pythia.event[iPart];
+
+			pdg = part.id();
+			// in case of ssbar, save the highest pT. in case only one s(bar), pT always > -1 
+			if(part.status()==-23 && abs(pdg)==3 && part.pT() > pTssbar) pTssbar = part.pT();
+			
+			if(!part.isFinal()) continue; // final state particle 
+			pT = part.pT();
+			eta = part.eta();
+      y = part.y();
+			Double_t abseta = abs(eta);
+
+      // check if particle satisfies INEL>0 criteria (in case there wasn't already one before this particle)
+      if(!INEL0)
+        if(part.isCharged() && abseta < 1.0 && part.statusHepMC() != 2)
+          INEL0 = true;
+
+			// if(pT < pTmin || abseta > maxEta) continue; // kine cuts & strangeness check
+			if(abseta < 4.0) Ntracks4p0++;
+			if(abseta < 2.4) Ntracks2p4++; 
+			if(abseta < 0.8) Ntracks0p8++;
+			if(!isChargedCascade(pdg)) continue;
+
+			phi = part.phi();
+
+			track.setPDG(pdg);
+			track.setpT(pT);
+			track.setEta(eta);
+      track.setY(y);
+			track.setPhi(phi);
+			event->addCandidate(track);
+			track.Clear();
+
+			candidatesPerEvent++;
+		} // end track loop
+
+    // check if event satisfies INEL>0 criteria and has cascade(s) in it, if not, skip event
+    if(!INEL0) {
+      hRejectedEvents->Fill(0.5);
+      event->Clear();
+      continue;
+    }
+    if(event->getCandidates().empty()) {
+      hRejectedEvents->Fill(1.5);
+      event->Clear();
+      continue;
+    }
+
+		event->setEventId(eventIdOffset+iEvent);
+		event->setNtracks4p0(Ntracks4p0);
+		event->setNtracks2p4(Ntracks2p4);
+		event->setNtracks0p8(Ntracks0p8);
+		event->setpTssbar(pTssbar);
+		tree->Fill();
+		event->Clear();
+	} // end event loop
+	outFile->Write();
+	cout << "Output written to file " << outFile->GetName() << endl;
+	outFile->Close();
+
+	// stop keeping track of time, and calculate how long it took
+  auto end = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+  cout << "This script took " << duration.count()/60. << " minutes to run." << endl;
+	return 0;
+} // end main

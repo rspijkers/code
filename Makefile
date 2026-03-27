@@ -6,7 +6,7 @@ CXXFLAGS:=$(shell root-config --cflags) $(shell root-config --libs)
 ##### The following section allows for ROOT I/O of custom classes:
 ##### This is needed if you want to fill a Tree with a custom Event class for instance
 
-CPATH:=/home/rik/cernbox/PhD/code# 	# path to code repository
+CPATH:=/home/rik/code# 	# path to code repository
 
 ifeq (stbc,$(findstring stbc,$(shell hostname)))
 CPATH:=/user/rspijker/project/code
@@ -25,15 +25,15 @@ DICT:=EventDict.cpp#					# Name of the dictionary to be created, can pretty much
 
 # Only do this if tree_handler_v2.cpp exists. Executing `make tree_handler_v2` targets this specifically. Explanation of the recipe below.
 # remove all the '@' at the start of the lines for debugging
-tree_handler_v2: tree_handler_v2.cpp
-	@echo -n Making dictionary with rootcling...\  
+tree_handler_v2: tree_handler_v2.cpp $(INCLUDE)/SmallTrack.h $(INCLUDE)/SmallEvent.h
+	@echo -n Making dictionary with rootcling...\ 
 
 	@rootcling -f $(LIB)/$(DICT) -I$(ROOTPATH) -I$(INCLUDE) $(HEADERS) $(LINKDEF)
 
 	@echo Success!
 	@echo -n Making library libEvent.so...\ 
 
-	@g++ -shared -o $(LIB)/libEvent.so -fPIC -std=c++17 -I$(ROOTPATH) -I$(INCLUDE) -I$(SRC) $(LIB)/$(DICT) $(SOURCES) $(root-config --ldflags --libs)
+	@g++ -shared -o $(LIB)/libEvent.so -fPIC $(CXXFLAGS) -I$(INCLUDE) -I$(SRC) $(LIB)/$(DICT) $(SOURCES)
 	
 	@echo Success!
 	@echo -n Creating executable and linking libraries...\ 
@@ -43,6 +43,26 @@ tree_handler_v2: tree_handler_v2.cpp
 	@echo Success!
 	@echo Looks like everything worked! Cleaning up...
 	
+	@rm $(LIB)/$(DICT)
+
+xi_xi_correlations: xi_xi_correlations.cpp $(INCLUDE)/SmallTrack.h $(INCLUDE)/SmallEvent.h
+	@echo -n Making dictionary with rootcling...\ 
+
+	@rootcling -f $(LIB)/$(DICT) -I$(ROOTPATH) -I$(INCLUDE) $(HEADERS) $(LINKDEF)
+
+	@echo Success!
+	@echo -n Making library libEvent.so...\ 
+
+	@g++ -shared -o $(LIB)/libEvent.so -fPIC $(CXXFLAGS) -I$(INCLUDE) -I$(SRC) $(LIB)/$(DICT) $(SOURCES)
+
+	@echo Success!
+	@echo -n Creating executable and linking libraries...\ 
+
+	@g++ -o $@ $^ -L$(LIB) -lEvent -Wl,-rpath=$(LIB) $(CXXFLAGS) -I$(INCLUDE)
+
+	@echo Success!
+	@echo Looks like everything worked! Cleaning up...
+
 	@rm $(LIB)/$(DICT)
 
 # The first line creates a dictionary EventDict.cpp from the headers supplied. 

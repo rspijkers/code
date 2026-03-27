@@ -8,6 +8,7 @@ class SmallTrack {
         Int_t pdg; // pdg code
         Double_t pT;
         Double_t eta;
+        Double_t y;
         Double_t phi;
 
     public:
@@ -19,12 +20,14 @@ class SmallTrack {
         void setPDG(Int_t _pdg) {pdg = _pdg;}
         void setpT(Double_t _pT) {pT = _pT;}
         void setEta(Double_t _eta) {eta = _eta;}
+        void setY(Double_t _y) {y = _y;}
         void setPhi(Double_t _phi) {phi = _phi;}
 
         // getters
         Int_t getPDG() const {return pdg;}
         Double_t getpT() const {return pT;}
         Double_t getEta() const {return eta;}
+        Double_t getY() const {return y;}
         Double_t getPhi() const {return phi;}
 
         ClassDef(SmallTrack,1); 
