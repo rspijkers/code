@@ -94,7 +94,7 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-  TH1D* hRejectedEvents = new TH1D("hRejectedEvents", "Number of events rejected", 0, 2, 2);
+  TH1D* hRejectedEvents = new TH1D("hRejectedEvents", "Number of events rejected", 2, 0, 2);
   hRejectedEvents->GetXaxis()->SetBinLabel(1, "INEL0");
   hRejectedEvents->GetXaxis()->SetBinLabel(2, "no cascades");
 
