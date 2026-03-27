@@ -14,7 +14,7 @@ ID=$3
 # make outputdir before running script
 mkdir -p $OUTPATH
 
-if $? -ne 0; then
+if [ $? -ne 0 ]; then
   echo "Error: Something went wrong while creating output directory $OUTPATH. Please check the path and permissions."
   exit 1
 fi
@@ -26,6 +26,6 @@ eval "alienv setenv $ENVIRONMENT -c ./cascade_correlations $TMPDIR/$ID.root $PYT
 mv $TMPDIR/$ID.root $OUTPATH/$ID.root
 
 # warn the user in case something went wrong
-if $? -ne 0; then
+if [ $? -ne 0 ]; then
   echo "Error: Something went wrong with the script. Please check the output for more details."
 fi
