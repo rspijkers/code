@@ -1,19 +1,9 @@
-executable              = CondorScript.sh
-log                     = test.log
-output                  = outfile.txt
-error                   = errors.txt
-## Can use "el7", "el8", or "el9" for UseOS or you can specify your own 
-## SingularityImage but an OS must be specified and in string quotations. 
-## This job can run up to 4 hours. Can choose "express", "short", "medium", or "long".
-+JobCategory            = "express"
-queue
-
 Executable   = CondorScript.sh
 JobID        = $(Process) + 1
 Arguments    = /dcache/alice/rspijker/2026/test/ pythia_settings/ssbar_monash.cmnd $INT(JobID)
-Log          = job$INT(JobID).log
-Output       = job$INT(JobID).out
-Error        = job$INT(JobID).error
+Log          = logs/job$INT(JobID).log
+Output       = logs/job$INT(JobID).out
+Error        = logs/job$INT(JobID).error
 +JobCategory = "express"
 +UseOS       = "el9"
 queue 1
